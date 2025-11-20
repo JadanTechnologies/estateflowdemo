@@ -59,7 +59,7 @@ const PropertyForm: React.FC<{
         
         const newImageUrls: string[] = [];
         if (imageFiles && imageFiles.length > 0) {
-            const promises = Array.from(imageFiles).map(file => {
+            const promises = Array.from(imageFiles).map((file: File) => {
                 return new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
@@ -159,7 +159,7 @@ const PropertyForm: React.FC<{
                 <div>
                     <h4 className="text-sm font-medium text-text-secondary mb-2 mt-2">New Images to Upload</h4>
                     <div className="flex flex-wrap gap-2 p-2 bg-secondary rounded">
-                        {Array.from(imageFiles).map((file, index) => (
+                        {Array.from(imageFiles).map((file: File, index) => (
                             <img key={index} src={URL.createObjectURL(file)} alt={`New image ${index + 1}`} className="w-24 h-24 rounded-lg object-cover" />
                         ))}
                     </div>

@@ -3,14 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
 
-if (!API_KEY) {
-  console.warn("Gemini API key not found. Please set the API_KEY environment variable.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
-
 export const generateSmartReport = async (data: any, title: string) => {
   if (!API_KEY) {
+    console.warn("Gemini API key not found. Please set the API_KEY environment variable.");
     return `**Error: Gemini API key is not set.**
 Please set your API key to use this feature. This is a placeholder report.
 - Total Items: ${data.length}
@@ -18,6 +13,8 @@ Please set your API key to use this feature. This is a placeholder report.
 `;
   }
   
+  // Initialize the client here to prevent app crash on load if key is missing
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
   const model = 'gemini-2.5-flash';
 
   const prompt = `

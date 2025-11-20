@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { generateSmartReport } from '../services/geminiService';
 import { Property, Payment, Maintenance, Agent, Tenant, PaymentType, User, Role, Department, PaymentStatus } from '../types';
@@ -279,7 +281,7 @@ const Reports: React.FC<ReportsProps> = ({ properties, payments, maintenance, ag
     };
     
     // Apply filters
-    let finalPayments = filterByDate(visibleData.payments);
+    let finalPayments = filterByDate<Payment>(visibleData.payments);
     if (selectedProperty !== 'all') finalPayments = finalPayments.filter(p => p.propertyId === selectedProperty);
     if (selectedTenant !== 'all') finalPayments = finalPayments.filter(p => p.tenantId === selectedTenant);
     if (reportType === 'payments' && selectedPaymentType !== 'all') finalPayments = finalPayments.filter(p => p.paymentType === selectedPaymentType);
@@ -288,7 +290,7 @@ const Reports: React.FC<ReportsProps> = ({ properties, payments, maintenance, ag
     }
 
 
-    let finalMaintenance = filterByDate(visibleData.maintenance);
+    let finalMaintenance = filterByDate<Maintenance>(visibleData.maintenance);
     if (selectedProperty !== 'all') finalMaintenance = finalMaintenance.filter(m => m.propertyId === selectedProperty);
     
     let processedData: any[] = [];

@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useState } from 'react';
 import { Maintenance, Property, User, Permission, AuditLogEntry, Tenant } from '../types';
 import Modal from '../components/Modal';
@@ -186,7 +187,7 @@ const MaintenancePage: React.FC<{
 
         return Object.entries(costsByProperty).map(([name, cost]) => ({ name, cost }));
     } else {
-        const costsByMonth = maintenance.reduce((acc, task) => {
+        const costsByMonth = maintenance.reduce((acc: Record<string, { cost: number; date: Date }>, task: Maintenance) => {
             const taskDate = new Date(task.date);
             // Use a consistent key like 'YYYY-MM' to avoid locale issues
             const key = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}`;
