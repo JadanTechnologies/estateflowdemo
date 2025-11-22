@@ -2,7 +2,6 @@
 
 
 
-
 import React, { useState, useMemo } from 'react';
 import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry } from '../types';
 import Modal from '../components/Modal';
@@ -350,6 +349,12 @@ const Tenants: React.FC<{
     if (userRole?.name !== 'Agent') return true;
     return properties.some(p => p.agentId === currentUser.id && p.status === PropertyStatus.Vacant);
   }, [currentUser, properties, userRole]);
+
+  // Computed value for the currently selected tenant to ensure we have the latest data from the tenants array
+  const activeTenant = useMemo(() => {
+    if (!selectedTenant) return null;
+    return tenants.find(t => t.id === selectedTenant.id) || selectedTenant;
+  }, [selectedTenant, tenants]);
   
   const filteredTenants = useMemo(() => {
       if (!searchQuery) {
@@ -679,9 +684,9 @@ const Tenants: React.FC<{
           </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedTenant ? 'Edit Tenant' : 'Register New Tenant'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={activeTenant ? 'Edit Tenant' : 'Register New Tenant'}>
         <TenantForm 
-            tenant={selectedTenant} 
+            tenant={activeTenant} 
             properties={properties} 
             tenants={tenants} 
             onSave={handleSave} 
@@ -690,23 +695,23 @@ const Tenants: React.FC<{
       </Modal>
 
       <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title={`Tenant Details`}>
-        {selectedTenant && (
+        {activeTenant && (
             <TenantDetailModal
-                tenant={selectedTenant}
-                propertyName={getPropertyName(selectedTenant.propertyId)}
+                tenant={activeTenant}
+                propertyName={getPropertyName(activeTenant.propertyId)}
                 onClose={() => setIsDetailModalOpen(false)}
             />
         )}
       </Modal>
 
       <Modal isOpen={isAgreementOpen} onClose={() => setIsAgreementOpen(false)} title="Tenancy Agreement">
-          {selectedTenant && (
+          {activeTenant && (
               <TenancyAgreement
-                  tenant={selectedTenant}
-                  property={properties.find(p => p.id === selectedTenant.propertyId)!}
+                  tenant={activeTenant}
+                  property={properties.find(p => p.id === activeTenant.propertyId)!}
                   currentUser={currentUser}
-                  onSaveTenantSignature={(sig) => handleSaveSignature(selectedTenant.id, sig, 'tenant')}
-                  onSaveManagementSignature={(sig) => handleSaveSignature(selectedTenant.id, sig, 'management')}
+                  onSaveTenantSignature={(sig) => handleSaveSignature(activeTenant.id, sig, 'tenant')}
+                  onSaveManagementSignature={(sig) => handleSaveSignature(activeTenant.id, sig, 'management')}
                   onClose={() => setIsAgreementOpen(false)}
                   companyName="EstateFlow Inc."
               />
@@ -718,7 +723,7 @@ const Tenants: React.FC<{
         {selectedTenantForPayment && (
             <PaymentForm
                 payment={{ tenantId: selectedTenantForPayment.id, propertyId: selectedTenantForPayment.propertyId, paymentType: PaymentType.Rent }}
-                tenants={[selectedTenantForPayment]}
+                tenants={tenants}
                 properties={properties}
                 payments={payments}
                 onSave={handleSavePayment}
