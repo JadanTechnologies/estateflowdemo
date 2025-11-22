@@ -27,6 +27,7 @@ export const ICONS = {
 
 
 export const NAV_LINKS = [
+    { name: 'Platform Overview', href: '#platform-dashboard', icon: ICONS.dashboard, requiredPermission: Permission.VIEW_PLATFORM_DASHBOARD },
     { name: 'Dashboard', href: '#', icon: ICONS.dashboard, requiredPermission: Permission.VIEW_DASHBOARD },
     { name: 'Properties', href: '#properties', icon: ICONS.properties, requiredPermission: Permission.VIEW_PROPERTIES },
     { name: 'Tenants', href: '#tenants', icon: ICONS.tenants, requiredPermission: Permission.VIEW_TENANTS },
@@ -43,6 +44,7 @@ export const NAV_LINKS = [
 ];
 
 export const ALL_PERMISSIONS: { id: Permission, label: string, isAgentSpecific?: boolean }[] = [
+    { id: Permission.VIEW_PLATFORM_DASHBOARD, label: 'View Platform Dashboard (Owner Only)' },
     { id: Permission.VIEW_DASHBOARD, label: 'View Dashboard' },
     { id: Permission.VIEW_PROPERTIES, label: 'View Properties' },
     { id: Permission.MANAGE_PROPERTIES, label: 'Manage Properties (Add, Edit, Delete)' },

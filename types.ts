@@ -34,6 +34,9 @@ export enum PaymentMethod {
 }
 
 export enum Permission {
+  // Platform Owner
+  VIEW_PLATFORM_DASHBOARD = 'view_platform_dashboard',
+
   // Dashboard
   VIEW_DASHBOARD = 'view_dashboard',
 

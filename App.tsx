@@ -19,6 +19,7 @@ import AccessDenied from './pages/AccessDenied';
 import ThermalReceipt from './components/ThermalReceipt';
 import TenantDashboard from './pages/TenantDashboard';
 import LandingPage from './pages/LandingPage';
+import PlatformDashboard from './pages/PlatformDashboard'; // Import Platform Dashboard
 import { NAV_LINKS, Logo, INITIAL_LANDING_PAGE_CONFIG } from './constants';
 import { sendSms } from './services/notificationService';
 import { NOTIFICATION_SOUND_BASE64 } from './components/NotificationSound';
@@ -78,10 +79,20 @@ const initialDepartments: Department[] = [
 ];
 
 const initialRoles: Role[] = [
+    {
+      id: 'role_platform_owner',
+      name: 'Platform Owner',
+      permissions: [
+        Permission.VIEW_PLATFORM_DASHBOARD,
+        Permission.MANAGE_USERS,
+        Permission.MANAGE_SETTINGS,
+        Permission.VIEW_AUDIT_LOG
+      ]
+    },
     { 
       id: 'role_super_admin', 
       name: 'Super Admin', 
-      permissions: Object.values(Permission) // Super admin has all permissions
+      permissions: Object.values(Permission).filter(p => p !== Permission.VIEW_PLATFORM_DASHBOARD) // Super admin has all except platform dashboard
     },
     {
       id: 'role_manager',
@@ -114,7 +125,7 @@ const initialRoles: Role[] = [
 ];
 
 const initialUsers: User[] = [
-    { id: 'owner', name: 'Platform Owner', username: 'owner@estateflow.com', password: 'owner123', roleId: 'role_super_admin', status: UserStatus.Active },
+    { id: 'owner', name: 'Platform Owner', username: 'owner@estateflow.com', password: 'owner123', roleId: 'role_platform_owner', status: UserStatus.Active },
     { id: 'user1', name: 'Admin User', username: 'admin@estateflow.com', password: 'admin123', roleId: 'role_super_admin', status: UserStatus.Active },
     { id: 'user2', name: 'Manager User', username: 'manager@estateflow.com', password: 'manager123', roleId: 'role_manager', departmentId: 'dept_res', status: UserStatus.Active },
     { id: 'user3', name: 'Accountant User', username: 'accountant@estateflow.com', password: 'accountant123', roleId: 'role_accountant', status: UserStatus.Active },
@@ -264,10 +275,13 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (use
                     </button>
                 </form>
                  <div className="mt-6 text-center">
-                     <p className="text-xs text-gray-500">Demo Credentials:</p>
-                     <p className="text-xs text-gray-400">owner@estateflow.com / owner123 (Owner)</p>
-                     <p className="text-xs text-gray-400">admin@estateflow.com / admin123</p>
-                     <p className="text-xs text-gray-400">tenant@estateflow.com / tenant123</p>
+                     <p className="text-xs text-gray-500 mb-1">Demo Credentials:</p>
+                     <p className="text-xs text-gray-400">owner@estateflow.com / owner123 (Platform Owner)</p>
+                     <p className="text-xs text-gray-400">admin@estateflow.com / admin123 (Business Admin)</p>
+                     <p className="text-xs text-gray-400">tenant@estateflow.com / tenant123 (Tenant)</p>
+                 </div>
+                 <div className="mt-6 border-t border-gray-700 pt-4 text-center">
+                    <p className="text-xs text-text-secondary">Developed by <span className="text-primary font-semibold">Jadan Technologies</span></p>
                  </div>
             </div>
       </div>
@@ -283,7 +297,19 @@ const App = () => {
                 return initialData;
             }
             // Deep merge to ensure new properties (like landingPageConfig) are added if missing in old storage
-            return { ...initialData, ...JSON.parse(serializedState) };
+            const loadedState = JSON.parse(serializedState);
+            
+            // Ensure Platform Owner role exists if loading old data
+            if (!loadedState.roles.find((r: Role) => r.id === 'role_platform_owner')) {
+                loadedState.roles.unshift(initialRoles[0]);
+            }
+            // Ensure Platform Owner user has correct role
+            const ownerUser = loadedState.users.find((u: User) => u.id === 'owner');
+            if (ownerUser && ownerUser.roleId === 'role_super_admin') {
+                ownerUser.roleId = 'role_platform_owner';
+            }
+
+            return { ...initialData, ...loadedState };
         } catch (error) {
             console.error("Error loading state from local storage:", error);
             return initialData;
@@ -362,9 +388,12 @@ const App = () => {
             return { properties: [], payments: [], tenants: [], agents: [], maintenance: [], users: [], departments: [], roles: [], commissionPayments: [] };
         }
         const role = roles.find(r => r.id === staffUser.roleId);
-        if (role?.name === 'Super Admin' || role?.name === 'Accountant') {
+        
+        // Platform Owner sees everything for management purposes but uses a dedicated dashboard
+        if (role?.name === 'Platform Owner' || role?.name === 'Super Admin' || role?.name === 'Accountant') {
             return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
         }
+        
         if (role?.name === 'Property Manager') {
             const managerProperties = properties.filter(p => p.departmentId === staffUser.departmentId);
             const propertyIds = new Set(managerProperties.map(p => p.id));
@@ -419,9 +448,15 @@ const App = () => {
                 return userRole?.permissions.includes(permission) ?? false;
             };
 
-            const defaultPage = NAV_LINKS.find(link => hasPermission(link.requiredPermission))?.name.toLowerCase() || 'dashboard';
-            setActivePage(defaultPage);
-            window.location.hash = `#${defaultPage}`;
+            // If user is Platform Owner, redirect to platform dashboard
+            if (hasPermission(Permission.VIEW_PLATFORM_DASHBOARD)) {
+                setActivePage('platform-dashboard');
+                window.location.hash = '#platform-dashboard';
+            } else {
+                const defaultPage = NAV_LINKS.find(link => hasPermission(link.requiredPermission))?.name.toLowerCase() || 'dashboard';
+                setActivePage(defaultPage);
+                window.location.hash = `#${defaultPage}`;
+            }
         } else {
             setActivePage('tenant-dashboard');
             window.location.hash = '#tenant-dashboard';
@@ -471,6 +506,16 @@ const App = () => {
         addAuditLog('SENT_BROADCAST', `Sent ${type} broadcast to ${target}. Subject: ${subject || 'N/A'}`);
     };
 
+    const toggleUserStatus = (userId: string) => {
+        setUsers(prev => prev.map(u => 
+            u.id === userId ? { ...u, status: u.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active } : u
+        ));
+        const targetUser = users.find(u => u.id === userId);
+        if (targetUser) {
+            addAuditLog('TOGGLED_USER_STATUS', `Changed status of ${targetUser.username} to ${targetUser.status === UserStatus.Active ? 'Suspended' : 'Active'}`, userId);
+        }
+    };
+
     const markNotificationAsRead = (id: string) => {
         setReadNotificationIds(prev => new Set(prev).add(id));
     };
@@ -487,13 +532,20 @@ const App = () => {
             if (hash) {
                 setActivePage(hash);
             } else if (currentUser && 'roleId' in currentUser) {
-                setActivePage('dashboard');
+                // Check permissions to set default page safely
+                if (userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD)) {
+                    setActivePage('platform-dashboard');
+                } else {
+                    setActivePage('dashboard');
+                }
             }
         };
         window.addEventListener('hashchange', handleHashChange);
-        handleHashChange(); // Initial load
+        // Handle initial load if hash exists
+        if (window.location.hash) handleHashChange(); 
+        
         return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [currentUser]);
+    }, [currentUser, userHasPermission]);
 
     // Effect for automated notifications
     useEffect(() => {
@@ -573,6 +625,7 @@ const App = () => {
         const pageToRender = activePage.split('/')[0] || 'dashboard';
 
         const pagePermissionMap: { [key: string]: Permission } = {
+            'platform-dashboard': Permission.VIEW_PLATFORM_DASHBOARD,
             'dashboard': Permission.VIEW_DASHBOARD, 'properties': Permission.VIEW_PROPERTIES,
             'tenants': Permission.VIEW_TENANTS, 'payments': Permission.VIEW_PAYMENTS,
             'maintenance': Permission.VIEW_MAINTENANCE, 'reports': Permission.VIEW_REPORTS,
@@ -588,6 +641,7 @@ const App = () => {
         }
 
         switch(pageToRender) {
+          case 'platform-dashboard': return <PlatformDashboard users={users} roles={roles} toggleUserStatus={toggleUserStatus} />;
           case 'dashboard': return <Dashboard {...visibleData} currentUser={staffUser!} />;
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
           case 'tenants': return <Tenants {...visibleData} templates={templates} setTenants={setTenants} setPayments={setPayments} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} onPrintReceipt={onPrintReceipt} onSendSms={onSendSms} addAuditLog={addAuditLog} />;
@@ -601,7 +655,7 @@ const App = () => {
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;
           case 'auditlog': return <AuditLog auditLog={auditLog} />;
-          default: return <Dashboard {...visibleData} currentUser={staffUser!} />;
+          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} toggleUserStatus={toggleUserStatus} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
         }
     };
 
