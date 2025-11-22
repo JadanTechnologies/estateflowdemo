@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry } from '../types';
 import Modal from '../components/Modal';
@@ -7,6 +8,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import SmsModal from '../components/SmsModal';
 import { ICONS } from '../constants';
 import TenancyAgreement from '../components/TenancyAgreement';
+import TenantOnboardingWizard from '../components/TenantOnboardingWizard';
 
 // Add this at the top of the file for jsPDF types
 declare global {
@@ -320,6 +322,7 @@ const Tenants: React.FC<{
     addAuditLog: (action: string, details: string, targetId?: string) => void;
 }> = ({ tenants, properties, payments, agents, templates, setTenants, setPayments, setProperties, currentUser, roles, userHasPermission, onPrintReceipt, onSendSms, addAuditLog }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false); // New state for Wizard
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAgreementOpen, setIsAgreementOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -418,14 +421,14 @@ const Tenants: React.FC<{
   const formatCurrency = (amount: number) => `₦${amount.toLocaleString()}`;
   const getTenantName = (tenantId: string) => tenants.find(t => t.id === tenantId)?.fullName || 'N/A';
   
-  const handleSave = (tenant: Tenant, password?: string) => {
+  const handleSave = (tenant: Tenant, password?: string, initialPayment?: Payment) => {
     const isUpdating = !!selectedTenant;
     const oldPropertyId = selectedTenant?.propertyId;
     const newPropertyId = tenant.propertyId;
 
     let tenantToSave = { ...tenant };
     if (password) {
-        tenantToSave.password = password; // In a real app, this should be hashed
+        tenantToSave.password = password; 
     }
 
     if (isUpdating) {
@@ -449,14 +452,29 @@ const Tenants: React.FC<{
         setIsModalOpen(false);
         setSelectedTenant(null);
     } else {
+        // CREATE NEW TENANT (From Wizard)
         setTenants(prev => [...prev, tenantToSave]);
         addAuditLog('CREATED_TENANT', `Registered new tenant: ${tenant.fullName}`, tenant.id);
+        
+        // Update Property Status
         setProperties(prev =>
             prev.map(p =>
                 p.id === newPropertyId ? { ...p, status: PropertyStatus.Occupied } : p
             )
         );
-        setIsModalOpen(false);
+
+        // Handle Initial Payment if present
+        if (initialPayment) {
+            const property = properties.find(p => p.id === initialPayment.propertyId);
+            const paymentWithAgent = {
+                ...initialPayment,
+                agentId: property ? property.agentId : undefined,
+            };
+            setPayments(prev => [...prev, paymentWithAgent]);
+            addAuditLog('CREATED_PAYMENT', `Recorded initial payment of ${formatCurrency(initialPayment.amountPaid)} for ${tenant.fullName}`, initialPayment.id);
+        }
+
+        setIsWizardOpen(false); // Close Wizard
         setSelectedTenant(tenantToSave);
         setIsAgreementOpen(true);
     }
@@ -537,7 +555,7 @@ const Tenants: React.FC<{
         <h2 className="text-2xl font-bold">Tenants</h2>
         {(canManageTenantsGlobally || canManageOwnTenants) && (
             <button 
-                onClick={() => { setSelectedTenant(null); setIsModalOpen(true); }} 
+                onClick={() => { setSelectedTenant(null); setIsWizardOpen(true); }} 
                 className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded disabled:bg-gray-500 disabled:cursor-not-allowed"
                 disabled={canManageOwnTenants && !agentHasVacantProperties}
                 title={canManageOwnTenants && !agentHasVacantProperties ? "You have no vacant properties to assign a tenant to." : "Register a new tenant"}
@@ -680,13 +698,23 @@ const Tenants: React.FC<{
           </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={activeTenant ? 'Edit Tenant' : 'Register New Tenant'}>
+      {/* EDIT FORM - uses old single-page form */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title='Edit Tenant'>
         <TenantForm 
             tenant={activeTenant} 
             properties={properties} 
             tenants={tenants} 
             onSave={handleSave} 
             onClose={() => setIsModalOpen(false)} 
+        />
+      </Modal>
+
+      {/* NEW REGISTRATION WIZARD */}
+      <Modal isOpen={isWizardOpen} onClose={() => setIsWizardOpen(false)} title='New Tenant Registration Wizard'>
+        <TenantOnboardingWizard
+            properties={properties}
+            onSave={handleSave}
+            onClose={() => setIsWizardOpen(false)}
         />
       </Modal>
 
