@@ -208,6 +208,8 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const canManageSettings = userHasPermission(Permission.MANAGE_SETTINGS);
     const canManageRoles = userHasPermission(Permission.MANAGE_ROLES);
     const canManageCommunications = userHasPermission(Permission.MANAGE_COMMUNICATIONS);
+    // Determine if the current user is the Platform Owner
+    const isPlatformOwner = userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD);
 
     const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -333,7 +335,8 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                             <TemplateManager templates={templates} setTemplates={setTemplates} />
                         </div>
                     )}
-                    {canManageSettings && (
+                    {/* Hide Department Management from Platform Owner */}
+                    {canManageSettings && !isPlatformOwner && (
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-bold">Department Management</h3>
@@ -402,7 +405,8 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         </div>
                     )}
 
-                    {canManageSettings && (
+                    {/* Hide Manual Payment Gateway from Platform Owner */}
+                    {canManageSettings && !isPlatformOwner && (
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <h3 className="text-lg font-bold mb-4">Manual Payment Gateway Settings</h3>
                             <p className="text-sm text-text-secondary mb-4">Enter the bank account details that tenants will use for manual bank transfers. This information will be displayed to them when they choose this payment option.</p>
@@ -489,23 +493,26 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         </div>
                     </div>
 
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">Notification Settings</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="reminderDays" className="block text-sm font-medium text-text-secondary mb-1">Lease End Reminder Days</label>
-                                <input 
-                                    id="reminderDays"
-                                    type="text" 
-                                    value={leaseEndReminderDays} 
-                                    onChange={e => setLeaseEndReminderDays(e.target.value)} 
-                                    className="w-full bg-secondary p-2 rounded border border-border" 
-                                    placeholder="e.g., 90, 60, 30"
-                                />
-                                <p className="text-xs text-text-secondary mt-1">Enter days before lease expiry, separated by commas.</p>
+                    {/* Hide Notification Settings from Platform Owner */}
+                    {canManageSettings && !isPlatformOwner && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Notification Settings</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="reminderDays" className="block text-sm font-medium text-text-secondary mb-1">Lease End Reminder Days</label>
+                                    <input 
+                                        id="reminderDays"
+                                        type="text" 
+                                        value={leaseEndReminderDays} 
+                                        onChange={e => setLeaseEndReminderDays(e.target.value)} 
+                                        className="w-full bg-secondary p-2 rounded border border-border" 
+                                        placeholder="e.g., 90, 60, 30"
+                                    />
+                                    <p className="text-xs text-text-secondary mt-1">Enter days before lease expiry, separated by commas.</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                     
                     <div className="flex justify-end">
                         <button className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Settings</button>
