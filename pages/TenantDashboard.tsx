@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import { Tenant, Property, Payment, Maintenance, Announcement, PaymentType, PaymentMethod, PaymentStatus, ManualPaymentDetails } from '../types';
 import TenantHeader from '../components/TenantHeader';
@@ -189,6 +190,16 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant, tenants, setT
         };
     }, [payments, property]);
 
+    const daysUntilLeaseExpiry = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const leaseEnd = new Date(tenant.leaseEndDate);
+        const diffTime = leaseEnd.getTime() - today.getTime();
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }, [tenant.leaseEndDate]);
+
+    const showLeaseWarning = daysUntilLeaseExpiry >= 0 && daysUntilLeaseExpiry <= 30;
+
     const handleSaveMaintenance = (task: Maintenance) => {
         setMaintenance(prev => [task, ...prev]);
     };
@@ -347,6 +358,23 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant, tenants, setT
             <main className="flex-1 overflow-y-auto p-6">
                 <h2 className="text-3xl font-bold mb-6">Welcome back, {tenant.fullName.split(' ')[0]}!</h2>
                 
+                {showLeaseWarning && (
+                    <div className="mb-6 bg-yellow-500/10 border border-yellow-500/50 p-4 rounded-lg flex items-start space-x-4 shadow-lg">
+                        <div className="flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-yellow-500">Lease Expiring Soon</h3>
+                            <p className="text-yellow-100 mt-1">
+                                Your lease is set to expire in <strong className="text-white">{daysUntilLeaseExpiry} days</strong> on <strong className="text-white">{new Date(tenant.leaseEndDate).toLocaleDateString()}</strong>. 
+                                Please contact property management to discuss your renewal options.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div className="lg:col-span-1">
                         <TenantNav activePage={activeTenantPage} setActivePage={setActiveTenantPage} />
