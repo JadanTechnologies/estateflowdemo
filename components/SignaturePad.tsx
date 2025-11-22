@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 
 interface SignaturePadProps {
@@ -6,30 +7,46 @@ interface SignaturePadProps {
 
 const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasDrawn, setHasDrawn] = useState(false);
 
-    const getContext = () => canvasRef.current?.getContext('2d');
-
-    useEffect(() => {
+    // Function to set canvas size based on container
+    const initializeCanvas = () => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
-        
-        // Set canvas dimensions based on container size for responsiveness
-        const rect = canvas.parentElement!.getBoundingClientRect();
+        const container = containerRef.current;
+        if (!canvas || !container) return;
+
+        const rect = container.getBoundingClientRect();
+        // Set actual canvas size to match display size for sharp rendering
         canvas.width = rect.width;
         canvas.height = 200; // Fixed height
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.strokeStyle = '#f9fafb'; // Match text-primary color
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+    };
+
+    useEffect(() => {
+        initializeCanvas();
         
-        const ctx = getContext();
-        if (!ctx) return;
-        ctx.strokeStyle = '#f9fafb';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        const handleResize = () => {
+             // Reset canvas on resize to maintain aspect ratio and sharpness
+             // Note: This clears the canvas, which is standard behavior for simple resizing unless we persist paths
+             initializeCanvas();
+             setHasDrawn(false);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        const ctx = getContext();
+        const ctx = canvasRef.current?.getContext('2d');
         if (!ctx) return;
         
         const pos = getEventPosition(e);
@@ -41,7 +58,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing) return;
-        const ctx = getContext();
+        const ctx = canvasRef.current?.getContext('2d');
         if (!ctx) return;
         
         const pos = getEventPosition(e);
@@ -50,7 +67,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
     };
 
     const stopDrawing = () => {
-        const ctx = getContext();
+        const ctx = canvasRef.current?.getContext('2d');
         if (!ctx) return;
         ctx.closePath();
         setIsDrawing(false);
@@ -60,17 +77,22 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
         const canvas = canvasRef.current!;
         const rect = canvas.getBoundingClientRect();
         
-        if (e.nativeEvent instanceof MouseEvent) {
-             return { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
+        let clientX, clientY;
+
+        if ('touches' in e.nativeEvent) {
+             clientX = e.nativeEvent.touches[0].clientX;
+             clientY = e.nativeEvent.touches[0].clientY;
+        } else {
+             clientX = (e.nativeEvent as MouseEvent).clientX;
+             clientY = (e.nativeEvent as MouseEvent).clientY;
         }
-        // Touch event
-        const touch = (e.nativeEvent as TouchEvent).touches[0];
-        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+        
+        return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
     const handleClear = () => {
         const canvas = canvasRef.current;
-        const ctx = getContext();
+        const ctx = canvas?.getContext('2d');
         if (canvas && ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             setHasDrawn(false);
@@ -85,7 +107,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
     };
 
     return (
-        <div>
+        <div ref={containerRef} className="w-full">
             <canvas
                 ref={canvasRef}
                 onMouseDown={startDrawing}
@@ -95,7 +117,8 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
                 onTouchStart={startDrawing}
                 onTouchMove={draw}
                 onTouchEnd={stopDrawing}
-                className="bg-secondary border border-border rounded-md w-full"
+                className="bg-secondary border border-border rounded-md block touch-none w-full" // touch-none prevents scrolling
+                style={{ height: '200px' }}
             />
             <div className="flex justify-end space-x-2 mt-2">
                 <button type="button" onClick={handleClear} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded text-sm">Clear</button>
