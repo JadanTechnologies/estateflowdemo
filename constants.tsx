@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Permission, PaymentMethod } from './types';
+import { Permission, PaymentMethod, LandingPageConfig } from './types';
 
 export const Logo = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -79,4 +80,75 @@ export const PAYMENT_METHOD_ICONS: Record<PaymentMethod, React.ReactElement> = {
   [PaymentMethod.Manual]: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>,
   [PaymentMethod.Paystack]: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V5z" clipRule="evenodd" /></svg>,
   [PaymentMethod.Flutterwave]: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V5z" clipRule="evenodd" /></svg>,
+};
+
+export const INITIAL_LANDING_PAGE_CONFIG: LandingPageConfig = {
+    hero: {
+        title: "The Future of Real Estate Management",
+        subtitle: "EstateFlow isn't just a dashboard. It's a complete digital ecosystem for modern property management. Automate rent, manage tenants, and visualize your portfolio in real-time.",
+        ctaText: "Get Started"
+    },
+    about: {
+        title: "About EstateFlow",
+        description: "Founded in 2023, EstateFlow aims to revolutionize the property management industry in Africa. We believe in transparency, efficiency, and leveraging technology to make property management seamless for landlords and comfortable for tenants.",
+        imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80"
+    },
+    features: {
+        title: "Why Choose EstateFlow?",
+        subtitle: "Comprehensive tools for modern property managers.",
+        items: [
+            { title: "Automated Payments", description: "Seamlessly track rent, deposits, and issue receipts automatically.", icon: "credit-card" },
+            { title: "Tenant Portal", description: "Give tenants a dedicated space to pay rent, request maintenance, and view lease details.", icon: "users" },
+            { title: "Maintenance Tracking", description: "Log, assign, and track maintenance requests from start to finish.", icon: "tool" }
+        ]
+    },
+    howItWorks: {
+        title: "How It Works",
+        steps: [
+            { title: "Register Properties", description: "Add your residential or commercial properties to the system." },
+            { title: "Onboard Tenants", description: "Register tenants and assign them to units. They get instant access to the portal." },
+            { title: "Automate & Relax", description: "Let EstateFlow handle rent reminders, payment tracking, and reporting." }
+        ]
+    },
+    pricing: {
+        title: "Simple, Transparent Pricing",
+        subtitle: "Choose the plan that fits your portfolio size.",
+        plans: [
+            { name: "Starter", price: "₦0", period: "/mo", features: ["Up to 5 Properties", "Basic Reporting", "Tenant Portal"] },
+            { name: "Professional", price: "₦15,000", period: "/mo", features: ["Up to 50 Properties", "Advanced Analytics", "SMS Notifications", "Priority Support"], highlighted: true },
+            { name: "Enterprise", price: "Custom", period: "", features: ["Unlimited Properties", "Dedicated Account Manager", "Custom Integrations", "White Labeling"] }
+        ]
+    },
+    testimonials: {
+        title: "What Our Customers Say",
+        items: [
+            { name: "Sarah Johnson", role: "Property Manager", comment: "EstateFlow has completely transformed how I manage my 20 units. The automated rent reminders alone have saved me hours every month.", avatarUrl: "https://i.pravatar.cc/150?u=sarah" },
+            { name: "Michael Okonkwo", role: "Landlord", comment: "Finally, a system that is built for our local market. The reporting features are fantastic.", avatarUrl: "https://i.pravatar.cc/150?u=michael" }
+        ]
+    },
+    faqs: {
+        title: "Frequently Asked Questions",
+        items: [
+            { question: "Is my data secure?", answer: "Yes, we use industry-standard encryption to protect your data and your tenants' information." },
+            { question: "Can I export my data?", answer: "Absolutely. You can export financial reports and tenant lists to PDF or CSV at any time." },
+            { question: "Do you support local payment gateways?", answer: "Yes, we integrate with Paystack, Flutterwave, and Monnify for seamless transactions." }
+        ]
+    },
+    blog: {
+        title: "Latest from Our Blog",
+        posts: [
+            { title: "5 Tips for Better Tenant Retention", excerpt: "Keeping good tenants is cheaper than finding new ones. Here is how to keep them happy.", date: "2023-10-15", imageUrl: "https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" },
+            { title: "Understanding Property Tax in Lagos", excerpt: "A comprehensive guide to navigating the complex world of property taxation.", date: "2023-11-02", imageUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" }
+        ]
+    },
+    legal: {
+        privacyPolicy: "We value your privacy. This policy describes how we collect, use, and share your personal information...",
+        termsOfService: "By using EstateFlow, you agree to the following terms and conditions...",
+        refundPolicy: "Subscriptions can be cancelled at any time. Refunds are processed on a pro-rata basis..."
+    },
+    contact: {
+        email: "contact@estateflow.com",
+        phone: "+234 800 123 4567",
+        address: "123 Innovation Drive, Tech City, Lagos"
+    }
 };

@@ -1,55 +1,58 @@
+
 import React, { useState } from 'react';
 import { Logo } from '../constants';
+import { LandingPageConfig } from '../types';
+import Modal from '../components/Modal';
 
 interface LandingPageProps {
   onLoginClick: () => void;
+  config: LandingPageConfig;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
-  const [activeTab, setActiveTab] = useState<'managers' | 'tenants'>('managers');
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
+  const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | 'refund' | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white overflow-hidden font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#030712] text-white overflow-hidden font-sans selection:bg-indigo-500 selection:text-white scroll-smooth">
       {/* Navbar */}
-      <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto relative z-20">
-        <div className="flex items-center space-x-2">
-          <Logo className="h-10 w-10 text-indigo-500" />
-          <span className="text-2xl font-bold tracking-tight">EstateFlow</span>
+      <nav className="fixed w-full z-50 bg-[#030712]/80 backdrop-blur-md border-b border-white/10">
+          <div className="flex justify-between items-center p-6 max-w-7xl mx-auto">
+            <div className="flex items-center space-x-2">
+              <Logo className="h-10 w-10 text-indigo-500" />
+              <span className="text-2xl font-bold tracking-tight">EstateFlow</span>
+            </div>
+            <div className="hidden md:flex space-x-8 text-sm font-medium text-gray-400">
+              <a href="#about" className="hover:text-indigo-400 transition-colors">About</a>
+              <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
+              <a href="#pricing" className="hover:text-indigo-400 transition-colors">Pricing</a>
+              <a href="#contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+            </div>
+            <button 
+              onClick={onLoginClick}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)]"
+            >
+              Login
+            </button>
         </div>
-        <div className="hidden md:flex space-x-8 text-sm font-medium text-gray-400">
-          <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
-          <a href="#solutions" className="hover:text-indigo-400 transition-colors">Solutions</a>
-          <a href="#pricing" className="hover:text-indigo-400 transition-colors">Pricing</a>
-        </div>
-        <button 
-          onClick={onLoginClick}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)]"
-        >
-          Login
-        </button>
       </nav>
 
       {/* Hero Section */}
-      <main className="relative pt-10 pb-20 lg:pt-20 max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        
-        {/* Text Content */}
+      <section className="relative pt-32 pb-20 lg:pt-40 max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-screen">
         <div className="relative z-10 space-y-8">
           <div className="inline-flex items-center space-x-2 bg-indigo-900/30 border border-indigo-500/30 rounded-full px-3 py-1 text-xs font-medium text-indigo-300">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
             </span>
-            <span>v2.0 Live: AI Smart Reports</span>
+            <span>EstateFlow 2.0 is Live</span>
           </div>
 
           <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight tracking-tight">
-            The Future of <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Real Estate</span> <br/>
-            Management.
+            {config.hero.title}
           </h1>
           
           <p className="text-lg text-gray-400 max-w-xl leading-relaxed">
-            EstateFlow isn't just a dashboard. It's a complete digital ecosystem for modern property management. Automate rent, manage tenants, and visualize your portfolio in real-time.
+            {config.hero.subtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -57,73 +60,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               onClick={onLoginClick}
               className="bg-white text-black px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform duration-200"
             >
-              Get Started
+              {config.hero.ctaText}
             </button>
-            <button className="px-8 py-4 rounded-xl font-bold text-lg text-white border border-gray-700 hover:bg-white/5 transition-colors flex items-center justify-center group">
-              Watch Demo
+            <a href="#howitworks" className="px-8 py-4 rounded-xl font-bold text-lg text-white border border-gray-700 hover:bg-white/5 transition-colors flex items-center justify-center group">
+              How it Works
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
-          </div>
-
-          <div className="pt-8 border-t border-gray-800 flex items-center gap-8">
-             <div>
-               <p className="text-3xl font-bold text-white">500+</p>
-               <p className="text-xs text-gray-500 uppercase tracking-widest">Properties</p>
-             </div>
-             <div>
-               <p className="text-3xl font-bold text-white">₦2.5B</p>
-               <p className="text-xs text-gray-500 uppercase tracking-widest">Managed</p>
-             </div>
-             <div>
-               <p className="text-3xl font-bold text-white">99.9%</p>
-               <p className="text-xs text-gray-500 uppercase tracking-widest">Uptime</p>
-             </div>
+            </a>
           </div>
         </div>
 
         {/* 3D Visualization Area */}
         <div className="relative h-[500px] w-full flex items-center justify-center perspective-container">
-            {/* This is a pure CSS 3D construction representing a digital building */}
             <div className="isometric-city">
-                 {/* Base Platform */}
                  <div className="platform"></div>
-                 
-                 {/* Building Layers - Animated */}
                  <div className="building-stack">
-                    <div className="floor floor-1">
-                        <div className="face front"></div>
-                        <div className="face back"></div>
-                        <div className="face right"></div>
-                        <div className="face left"></div>
-                        <div className="face top"></div>
-                    </div>
-                    <div className="floor floor-2">
-                         <div className="face front"></div>
-                        <div className="face back"></div>
-                        <div className="face right"></div>
-                        <div className="face left"></div>
-                        <div className="face top"></div>
-                    </div>
-                    <div className="floor floor-3">
-                        <div className="face front"></div>
-                        <div className="face back"></div>
-                        <div className="face right"></div>
-                        <div className="face left"></div>
-                        <div className="face top"></div>
-                    </div>
-                    <div className="floor floor-4">
-                        <div className="face front"></div>
-                        <div className="face back"></div>
-                        <div className="face right"></div>
-                        <div className="face left"></div>
-                        <div className="face top"></div>
-                    </div>
+                    <div className="floor floor-1"><div className="face front"></div><div className="face back"></div><div className="face right"></div><div className="face left"></div><div className="face top"></div></div>
+                    <div className="floor floor-2"><div className="face front"></div><div className="face back"></div><div className="face right"></div><div className="face left"></div><div className="face top"></div></div>
+                    <div className="floor floor-3"><div className="face front"></div><div className="face back"></div><div className="face right"></div><div className="face left"></div><div className="face top"></div></div>
+                    <div className="floor floor-4"><div className="face front"></div><div className="face back"></div><div className="face right"></div><div className="face left"></div><div className="face top"></div></div>
                  </div>
-
-                 {/* Floating Data Cards */}
                  <div className="floating-card card-1">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -138,9 +95,231 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                  </div>
             </div>
         </div>
-      </main>
+      </section>
 
-      {/* CSS Styles for 3D Animation - Injected here for the component */}
+      {/* About Section */}
+      <section id="about" className="py-20 bg-[#0b0f19]">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+                <div className="space-y-6">
+                     <h2 className="text-3xl md:text-4xl font-bold text-white">{config.about.title}</h2>
+                     <p className="text-gray-400 text-lg leading-relaxed">{config.about.description}</p>
+                     <div className="flex gap-4">
+                        <div className="p-4 bg-[#111827] rounded-lg border border-gray-800">
+                            <h3 className="text-2xl font-bold text-indigo-400">500+</h3>
+                            <p className="text-sm text-gray-500">Properties</p>
+                        </div>
+                        <div className="p-4 bg-[#111827] rounded-lg border border-gray-800">
+                            <h3 className="text-2xl font-bold text-indigo-400">98%</h3>
+                            <p className="text-sm text-gray-500">Satisfaction</p>
+                        </div>
+                     </div>
+                </div>
+                <div className="relative">
+                    <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full"></div>
+                    <img src={config.about.imageUrl} alt="About Us" className="relative rounded-2xl shadow-2xl border border-white/10" />
+                </div>
+            </div>
+        </div>
+      </section>
+
+       {/* How It Works Section */}
+       <section id="howitworks" className="py-20 bg-[#030712]">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-16">
+                <h2 className="text-3xl md:text-4xl font-bold text-white">{config.howItWorks.title}</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+                {config.howItWorks.steps.map((step, idx) => (
+                    <div key={idx} className="relative p-8 bg-[#111827] rounded-2xl border border-gray-800 hover:border-indigo-500/50 transition-colors">
+                        <div className="absolute -top-4 -left-4 w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg">
+                            {idx + 1}
+                        </div>
+                        <h3 className="text-xl font-bold mt-4 mb-3">{step.title}</h3>
+                        <p className="text-gray-400">{step.description}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-[#0b0f19]">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{config.features.title}</h2>
+                <p className="text-gray-400 text-lg">{config.features.subtitle}</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+                {config.features.items.map((feature, idx) => (
+                    <div key={idx} className="p-6 bg-[#111827] rounded-xl border border-gray-800 hover:bg-[#1f2937] transition-colors group">
+                        <div className="w-12 h-12 bg-indigo-900/50 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                        <p className="text-gray-400">{feature.description}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-[#030712]">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{config.pricing.title}</h2>
+                <p className="text-gray-400 text-lg">{config.pricing.subtitle}</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8 items-start">
+                {config.pricing.plans.map((plan, idx) => (
+                    <div key={idx} className={`relative p-8 rounded-2xl border ${plan.highlighted ? 'bg-[#1e1b4b] border-indigo-500 shadow-[0_0_30px_rgba(79,70,229,0.15)]' : 'bg-[#111827] border-gray-800'}`}>
+                        {plan.highlighted && <div className="absolute top-0 right-0 bg-indigo-500 text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">POPULAR</div>}
+                        <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                        <div className="flex items-baseline gap-1 mb-6">
+                            <span className="text-4xl font-extrabold">{plan.price}</span>
+                            <span className="text-gray-400">{plan.period}</span>
+                        </div>
+                        <ul className="space-y-4 mb-8">
+                            {plan.features.map((feat, fIdx) => (
+                                <li key={fIdx} className="flex items-center text-sm text-gray-300">
+                                    <svg className="w-5 h-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {feat}
+                                </li>
+                            ))}
+                        </ul>
+                        <button onClick={onLoginClick} className={`w-full py-3 rounded-lg font-bold transition-colors ${plan.highlighted ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
+                            Choose Plan
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 bg-[#0b0f19]">
+        <div className="max-w-7xl mx-auto px-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-16">{config.testimonials.title}</h2>
+            <div className="grid md:grid-cols-2 gap-8">
+                {config.testimonials.items.map((item, idx) => (
+                    <div key={idx} className="p-8 bg-[#111827] rounded-2xl border border-gray-800 relative">
+                        <svg className="absolute top-6 left-6 w-8 h-8 text-indigo-500/20" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" /></svg>
+                        <p className="text-gray-300 mb-6 italic pl-8">{item.comment}</p>
+                        <div className="flex items-center gap-4">
+                            <img src={item.avatarUrl} alt={item.name} className="w-12 h-12 rounded-full border-2 border-indigo-500" />
+                            <div>
+                                <h4 className="font-bold text-white">{item.name}</h4>
+                                <p className="text-sm text-indigo-400">{item.role}</p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+      </section>
+      
+      {/* Blog Section */}
+      <section className="py-20 bg-[#030712]">
+          <div className="max-w-7xl mx-auto px-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-16">{config.blog.title}</h2>
+              <div className="grid md:grid-cols-2 gap-8">
+                  {config.blog.posts.map((post, idx) => (
+                      <div key={idx} className="bg-[#111827] rounded-xl overflow-hidden border border-gray-800 hover:border-indigo-500/50 transition-all group cursor-pointer">
+                          <div className="h-48 overflow-hidden">
+                              <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          </div>
+                          <div className="p-6">
+                              <div className="text-xs text-indigo-400 mb-2">{post.date}</div>
+                              <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-400 transition-colors">{post.title}</h3>
+                              <p className="text-gray-400 text-sm">{post.excerpt}</p>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-[#0b0f19]">
+        <div className="max-w-3xl mx-auto px-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">{config.faqs.title}</h2>
+            <div className="space-y-4">
+                {config.faqs.items.map((item, idx) => (
+                    <details key={idx} className="group bg-[#111827] rounded-lg border border-gray-800 open:border-indigo-500/50 transition-all">
+                        <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-6">
+                            <span>{item.question}</span>
+                            <span className="transition group-open:rotate-180">
+                                <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
+                            </span>
+                        </summary>
+                        <div className="text-gray-400 mt-0 p-6 pt-0">
+                            {item.answer}
+                        </div>
+                    </details>
+                ))}
+            </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer id="contact" className="bg-[#02040a] pt-20 pb-10 border-t border-white/5">
+          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-12">
+              <div className="col-span-1 md:col-span-2">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Logo className="h-8 w-8 text-indigo-500" />
+                    <span className="text-xl font-bold">EstateFlow</span>
+                  </div>
+                  <p className="text-gray-400 mb-6 max-w-sm">
+                      Revolutionizing property management with cutting-edge technology and user-centric design.
+                  </p>
+                  <div className="flex space-x-4">
+                      {/* Social Icons Placeholder */}
+                      <div className="w-10 h-10 bg-[#111827] rounded-full flex items-center justify-center text-gray-400 hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">X</div>
+                      <div className="w-10 h-10 bg-[#111827] rounded-full flex items-center justify-center text-gray-400 hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">in</div>
+                      <div className="w-10 h-10 bg-[#111827] rounded-full flex items-center justify-center text-gray-400 hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">f</div>
+                  </div>
+              </div>
+              <div>
+                  <h4 className="font-bold text-white mb-6">Company</h4>
+                  <ul className="space-y-3 text-gray-400 text-sm">
+                      <li><a href="#about" className="hover:text-indigo-400">About Us</a></li>
+                      <li><button onClick={() => setActiveLegalModal('privacy')} className="hover:text-indigo-400">Privacy Policy</button></li>
+                      <li><button onClick={() => setActiveLegalModal('terms')} className="hover:text-indigo-400">Terms of Service</button></li>
+                      <li><button onClick={() => setActiveLegalModal('refund')} className="hover:text-indigo-400">Refund Policy</button></li>
+                  </ul>
+              </div>
+              <div>
+                  <h4 className="font-bold text-white mb-6">Contact</h4>
+                  <ul className="space-y-3 text-gray-400 text-sm">
+                      <li className="flex items-center"><span className="mr-2">📧</span> {config.contact.email}</li>
+                      <li className="flex items-center"><span className="mr-2">📞</span> {config.contact.phone}</li>
+                      <li className="flex items-center"><span className="mr-2">📍</span> {config.contact.address}</li>
+                  </ul>
+              </div>
+          </div>
+          <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm border-t border-white/5 pt-8">
+              © {new Date().getFullYear()} EstateFlow Inc. All rights reserved.
+          </div>
+      </footer>
+
+      {/* Legal Modals */}
+      <Modal isOpen={!!activeLegalModal} onClose={() => setActiveLegalModal(null)} title={activeLegalModal === 'privacy' ? 'Privacy Policy' : activeLegalModal === 'terms' ? 'Terms of Service' : 'Refund Policy'}>
+          <div className="p-4 whitespace-pre-wrap text-gray-300 text-sm leading-relaxed">
+             {activeLegalModal === 'privacy' && config.legal.privacyPolicy}
+             {activeLegalModal === 'terms' && config.legal.termsOfService}
+             {activeLegalModal === 'refund' && config.legal.refundPolicy}
+          </div>
+          <div className="flex justify-end p-4">
+              <button onClick={() => setActiveLegalModal(null)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">Close</button>
+          </div>
+      </Modal>
+
+      {/* CSS Styles for 3D Animation */}
       <style>{`
         .perspective-container {
             perspective: 1200px;
@@ -195,15 +374,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
         .floor-4 { transform: translateZ(120px); animation: assemble 2s ease-out 0.6s forwards; opacity: 0; }
 
         @keyframes assemble {
-            from { opacity: 0; transform: translateZ(300px); }
-            to { opacity: 1; } /* transform is handled by specific classes, but opacity needs keyframes */
-        }
-        /* Fix for keyframes overriding transforms: we rely on the 'to' state keeping the specific class transforms if we only animate properties that don't conflict, or use specific keyframes per floor. 
-           Simplification: Just animate opacity and a slight Z offset relative to final. 
-        */
-        @keyframes assemble {
              0% { opacity: 0; transform: translateZ(300px); }
-             100% { opacity: 1; } /* transform returns to class definition */
+             100% { opacity: 1; }
         }
 
         .face {
@@ -262,7 +434,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             0%, 100% { margin-top: 0px; }
             50% { margin-top: -15px; }
         }
-
       `}</style>
     </div>
   );

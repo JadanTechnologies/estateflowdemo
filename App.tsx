@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -18,7 +19,7 @@ import AccessDenied from './pages/AccessDenied';
 import ThermalReceipt from './components/ThermalReceipt';
 import TenantDashboard from './pages/TenantDashboard';
 import LandingPage from './pages/LandingPage';
-import { NAV_LINKS, Logo } from './constants';
+import { NAV_LINKS, Logo, INITIAL_LANDING_PAGE_CONFIG } from './constants';
 import { sendSms } from './services/notificationService';
 import { NOTIFICATION_SOUND_BASE64 } from './components/NotificationSound';
 
@@ -34,6 +35,7 @@ import {
   CommissionPayment,
   ManualPaymentDetails,
   AuditLogEntry,
+  LandingPageConfig,
 } from './types';
 
 // MOCK DATA
@@ -191,7 +193,7 @@ const initialTemplates: NotificationTemplate[] = [
 const LOCAL_STORAGE_KEY = 'estateFlowData';
 
 const initialData = {
-    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog
+    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog, landingPageConfig: INITIAL_LANDING_PAGE_CONFIG
 };
 
 const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (user: User | Tenant) => void }> = ({ isOpen, onClose, onLogin }) => {
@@ -273,6 +275,7 @@ const App = () => {
             if (serializedState === null) {
                 return initialData;
             }
+            // Deep merge to ensure new properties (like landingPageConfig) are added if missing in old storage
             return { ...initialData, ...JSON.parse(serializedState) };
         } catch (error) {
             console.error("Error loading state from local storage:", error);
@@ -300,6 +303,7 @@ const App = () => {
     const [manualPaymentDetails, setManualPaymentDetails] = useState<ManualPaymentDetails>(() => loadState().manualPaymentDetails);
     const [templates, setTemplates] = useState<NotificationTemplate[]>(() => loadState().templates);
     const [leaseEndReminderDays, setLeaseEndReminderDays] = useState(() => loadState().leaseEndReminderDays);
+    const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => loadState().landingPageConfig);
     
     // Auth & UI State
     const [currentUser, setCurrentUser] = useState<User | Tenant | null>(null);
@@ -312,14 +316,14 @@ const App = () => {
     // Save state to local storage whenever it changes
     useEffect(() => {
         const stateToSave = {
-            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog
+            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (error) {
             console.error("Error saving state to local storage:", error);
         }
-    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog]);
+    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig]);
 
 
     const addAuditLog = (action: string, details: string, targetId?: string) => {
@@ -541,7 +545,7 @@ const App = () => {
     if (!currentUser) {
         return (
             <>
-                <LandingPage onLoginClick={() => setIsLoginModalOpen(true)} />
+                <LandingPage onLoginClick={() => setIsLoginModalOpen(true)} config={landingPageConfig} />
                 <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
             </>
         );
@@ -585,7 +589,7 @@ const App = () => {
           case 'reports': return <Reports {...visibleData} currentUser={staffUser!} />;
           case 'agents': return <Agents {...visibleData} setAgents={setAgents} currentUser={staffUser!} userHasPermission={userHasPermission} commissionPayments={commissionPayments} setCommissionPayments={setCommissionPayments} addAuditLog={addAuditLog} />;
           case 'users': return <Users {...visibleData} setUsers={setUsers} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
-          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} />;
+          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={setLandingPageConfig} />;
           case 'emaillog': return <EmailLog emailLog={emailLog} />;
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;

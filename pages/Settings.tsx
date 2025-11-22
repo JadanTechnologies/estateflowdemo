@@ -1,14 +1,12 @@
 
-
-
-
 import React, { useState } from 'react';
-import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry } from '../types';
+import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry, LandingPageConfig } from '../types';
 import { ALL_PERMISSIONS } from '../constants';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TemplateManager from '../components/TemplateManager';
 import CommunicationForm from '../components/CommunicationForm';
+import LandingPageEditor from '../components/LandingPageEditor';
 
 
 interface RoleFormProps {
@@ -185,9 +183,11 @@ interface SettingsProps {
     manualPaymentDetails: ManualPaymentDetails;
     setManualPaymentDetails: React.Dispatch<React.SetStateAction<ManualPaymentDetails>>;
     addAuditLog: (action: string, details: string, targetId?: string) => void;
+    landingPageConfig: LandingPageConfig;
+    setLandingPageConfig: (config: LandingPageConfig) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog }) => {
+const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog, landingPageConfig, setLandingPageConfig }) => {
     const [platformName, setPlatformName] = useState('EstateFlow');
     const [companyEmail, setCompanyEmail] = useState('contact@estateflow.com');
     const [companyPhone, setCompanyPhone] = useState('08012345678, 09087654321');
@@ -197,6 +197,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
     const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+    const [activeTab, setActiveTab] = useState('general');
 
     const [isRoleConfirmOpen, setIsRoleConfirmOpen] = useState(false);
     const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
@@ -290,212 +291,227 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
         window.location.reload();
     };
 
+    const handleLandingPageSave = (newConfig: LandingPageConfig) => {
+        setLandingPageConfig(newConfig);
+        addAuditLog('UPDATED_LANDING_PAGE', 'Updated landing page configuration.');
+    };
+
     return (
         <div className="p-6">
             <h2 className="text-2xl font-bold mb-6">Settings</h2>
-            <div className="space-y-8 max-w-4xl">
-                {canManageSettings && (
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold text-red-400 mb-4">System Actions</h3>
-                        <p className="text-sm text-text-secondary mb-4">Be careful with these actions. Resetting data is irreversible and will restore the application to its initial demo state.</p>
-                        <button
-                            onClick={() => setIsResetConfirmOpen(true)}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                        >
-                            Reset Application Data
-                        </button>
-                    </div>
-                )}
-                {canManageCommunications && (
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">Communications</h3>
-                        <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
-                    </div>
-                )}
-                {canManageCommunications && (
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">Notification Templates</h3>
-                        <TemplateManager templates={templates} setTemplates={setTemplates} />
-                    </div>
-                )}
-                {canManageSettings && (
-                     <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">Department Management</h3>
-                            <button onClick={() => { setSelectedDept(null); setIsDeptModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">
-                                Add Department
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                           <table className="w-full text-left">
-                                <thead className="border-b border-border">
-                                    <tr>
-                                        <th className="p-3">Department Name</th>
-                                        <th className="p-3">Properties</th>
-                                        <th className="p-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {departments.map(dept => (
-                                        <tr key={dept.id} className="border-b border-border/50">
-                                            <td className="p-3 font-semibold">{dept.name}</td>
-                                            <td className="p-3">{properties.filter(p => p.departmentId === dept.id).length}</td>
-                                            <td className="p-3 space-x-4">
-                                                <button onClick={() => { setSelectedDept(dept); setIsDeptModalOpen(true); }} className="text-blue-400 hover:text-blue-300">Edit</button>
-                                                <button onClick={() => handleDeleteDepartmentClick(dept.id)} className="text-red-400 hover:text-red-300">Delete</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                           </table>
-                        </div>
-                    </div>
-                )}
-                {canManageRoles && (
-                     <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">Role Management</h3>
-                            <button onClick={() => { setSelectedRole(null); setIsRoleModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">
-                                Add New Role
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                           <table className="w-full text-left">
-                                <thead className="border-b border-border">
-                                    <tr>
-                                        <th className="p-3">Role Name</th>
-                                        <th className="p-3">Users</th>
-                                        <th className="p-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {roles.map(role => (
-                                        <tr key={role.id} className="border-b border-border/50">
-                                            <td className="p-3 font-semibold">{role.name}</td>
-                                            <td className="p-3">{users.filter(u => u.roleId === role.id).length}</td>
-                                            <td className="p-3 space-x-4">
-                                                <button onClick={() => { setSelectedRole(role); setIsRoleModalOpen(true); }} className="text-blue-400 hover:text-blue-300">Edit</button>
-                                                {role.name !== 'Super Admin' && (
-                                                    <button onClick={() => handleDeleteRoleClick(role.id)} className="text-red-400 hover:text-red-300">Delete</button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                           </table>
-                        </div>
-                    </div>
-                )}
+            
+            <div className="flex border-b border-border mb-6">
+                <button onClick={() => setActiveTab('general')} className={`px-4 py-2 font-medium ${activeTab === 'general' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>General</button>
+                {canManageSettings && <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>}
+            </div>
 
-                {canManageSettings && (
+            {activeTab === 'landing' && canManageSettings ? (
+                <LandingPageEditor config={landingPageConfig} onSave={handleLandingPageSave} />
+            ) : (
+                <div className="space-y-8 max-w-4xl">
+                    {canManageSettings && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold text-red-400 mb-4">System Actions</h3>
+                            <p className="text-sm text-text-secondary mb-4">Be careful with these actions. Resetting data is irreversible and will restore the application to its initial demo state.</p>
+                            <button
+                                onClick={() => setIsResetConfirmOpen(true)}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                            >
+                                Reset Application Data
+                            </button>
+                        </div>
+                    )}
+                    {canManageCommunications && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Communications</h3>
+                            <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
+                        </div>
+                    )}
+                    {canManageCommunications && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Notification Templates</h3>
+                            <TemplateManager templates={templates} setTemplates={setTemplates} />
+                        </div>
+                    )}
+                    {canManageSettings && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold">Department Management</h3>
+                                <button onClick={() => { setSelectedDept(null); setIsDeptModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">
+                                    Add Department
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                    <thead className="border-b border-border">
+                                        <tr>
+                                            <th className="p-3">Department Name</th>
+                                            <th className="p-3">Properties</th>
+                                            <th className="p-3">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {departments.map(dept => (
+                                            <tr key={dept.id} className="border-b border-border/50">
+                                                <td className="p-3 font-semibold">{dept.name}</td>
+                                                <td className="p-3">{properties.filter(p => p.departmentId === dept.id).length}</td>
+                                                <td className="p-3 space-x-4">
+                                                    <button onClick={() => { setSelectedDept(dept); setIsDeptModalOpen(true); }} className="text-blue-400 hover:text-blue-300">Edit</button>
+                                                    <button onClick={() => handleDeleteDepartmentClick(dept.id)} className="text-red-400 hover:text-red-300">Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                            </table>
+                            </div>
+                        </div>
+                    )}
+                    {canManageRoles && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold">Role Management</h3>
+                                <button onClick={() => { setSelectedRole(null); setIsRoleModalOpen(true); }} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">
+                                    Add New Role
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                    <thead className="border-b border-border">
+                                        <tr>
+                                            <th className="p-3">Role Name</th>
+                                            <th className="p-3">Users</th>
+                                            <th className="p-3">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {roles.map(role => (
+                                            <tr key={role.id} className="border-b border-border/50">
+                                                <td className="p-3 font-semibold">{role.name}</td>
+                                                <td className="p-3">{users.filter(u => u.roleId === role.id).length}</td>
+                                                <td className="p-3 space-x-4">
+                                                    <button onClick={() => { setSelectedRole(role); setIsRoleModalOpen(true); }} className="text-blue-400 hover:text-blue-300">Edit</button>
+                                                    {role.name !== 'Super Admin' && (
+                                                        <button onClick={() => handleDeleteRoleClick(role.id)} className="text-red-400 hover:text-red-300">Delete</button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                            </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {canManageSettings && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Manual Payment Gateway Settings</h3>
+                            <p className="text-sm text-text-secondary mb-4">Enter the bank account details that tenants will use for manual bank transfers. This information will be displayed to them when they choose this payment option.</p>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Bank Name</label>
+                                    <input type="text" name="bankName" value={manualPaymentDetails.bankName} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Account Name</label>
+                                    <input type="text" name="accountName" value={manualPaymentDetails.accountName} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Account Number</label>
+                                    <input type="text" name="accountNumber" value={manualPaymentDetails.accountNumber} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">Manual Payment Gateway Settings</h3>
-                        <p className="text-sm text-text-secondary mb-4">Enter the bank account details that tenants will use for manual bank transfers. This information will be displayed to them when they choose this payment option.</p>
+                        <h3 className="text-lg font-bold mb-4">Branding</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Bank Name</label>
-                                <input type="text" name="bankName" value={manualPaymentDetails.bankName} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Platform Name</label>
+                                <input type="text" value={platformName} onChange={e => setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Account Name</label>
-                                <input type="text" name="accountName" value={manualPaymentDetails.accountName} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Email</label>
+                                <input type="text" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Account Number</label>
-                                <input type="text" name="accountNumber" value={manualPaymentDetails.accountNumber} onChange={handleManualPaymentDetailsChange} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Phone Numbers</label>
+                                <input type="text" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Address</label>
+                                <input type="text" value={companyAddress} onChange={e => setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Platform Logo</label>
+                                <input type="file" className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"/>
                             </div>
                         </div>
                     </div>
-                )}
 
-                <div className="bg-card p-6 rounded-lg shadow-lg">
-                    <h3 className="text-lg font-bold mb-4">Branding</h3>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Platform Name</label>
-                            <input type="text" value={platformName} onChange={e => setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Company Email</label>
-                            <input type="text" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Company Phone Numbers</label>
-                            <input type="text" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Company Address</label>
-                            <input type="text" value={companyAddress} onChange={e => setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                        </div>
-                         <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Platform Logo</label>
-                            <input type="file" className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"/>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-card p-6 rounded-lg shadow-lg">
-                    <h3 className="text-lg font-bold mb-4">System Configuration</h3>
-                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Currency</label>
-                            <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
-                                <option value="NGN">NGN (₦)</option>
-                                <option value="USD">USD ($)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-card p-6 rounded-lg shadow-lg">
-                    <h3 className="text-lg font-bold mb-4">API & Integration Settings</h3>
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="font-semibold text-text-primary mb-2">SMS Provider (Twilio)</h4>
-                            <div className="p-4 bg-secondary rounded-lg space-y-3">
-                                <ApiCredentialInput label="Twilio Account SID" value={apiKeys.twilioSid} name="twilioSid" onChange={handleApiKeyChange} />
-                                <ApiCredentialInput label="Twilio Auth Token" value={apiKeys.twilioToken} name="twilioToken" onChange={handleApiKeyChange} />
-                            </div>
-                        </div>
-                         <div>
-                            <h4 className="font-semibold text-text-primary mb-2">Push Notifications (Firebase)</h4>
-                            <div className="p-4 bg-secondary rounded-lg space-y-3">
-                               <ApiCredentialInput label="Firebase Server Key" value={apiKeys.firebaseKey} name="firebaseKey" onChange={handleApiKeyChange} />
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-text-primary mb-2">Payment Gateways</h4>
-                            <div className="p-4 bg-secondary rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
-                               <ApiCredentialInput label="Paystack Secret Key" value={apiKeys.paystackKey} name="paystackKey" onChange={handleApiKeyChange} />
-                               <ApiCredentialInput label="Flutterwave Secret Key" value={apiKeys.flutterwaveKey} name="flutterwaveKey" onChange={handleApiKeyChange} />
-                               <ApiCredentialInput label="Monnify Secret Key" value={apiKeys.monnifyKey} name="monnifyKey" onChange={handleApiKeyChange} />
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="text-lg font-bold mb-4">System Configuration</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Currency</label>
+                                <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
+                                    <option value="NGN">NGN (₦)</option>
+                                    <option value="USD">USD ($)</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="bg-card p-6 rounded-lg shadow-lg">
-                    <h3 className="text-lg font-bold mb-4">Notification Settings</h3>
-                     <div className="space-y-4">
-                        <div>
-                            <label htmlFor="reminderDays" className="block text-sm font-medium text-text-secondary mb-1">Lease End Reminder Days</label>
-                            <input 
-                                id="reminderDays"
-                                type="text" 
-                                value={leaseEndReminderDays} 
-                                onChange={e => setLeaseEndReminderDays(e.target.value)} 
-                                className="w-full bg-secondary p-2 rounded border border-border" 
-                                placeholder="e.g., 90, 60, 30"
-                            />
-                            <p className="text-xs text-text-secondary mt-1">Enter days before lease expiry, separated by commas.</p>
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="text-lg font-bold mb-4">API & Integration Settings</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">SMS Provider (Twilio)</h4>
+                                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                                    <ApiCredentialInput label="Twilio Account SID" value={apiKeys.twilioSid} name="twilioSid" onChange={handleApiKeyChange} />
+                                    <ApiCredentialInput label="Twilio Auth Token" value={apiKeys.twilioToken} name="twilioToken" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">Push Notifications (Firebase)</h4>
+                                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                                <ApiCredentialInput label="Firebase Server Key" value={apiKeys.firebaseKey} name="firebaseKey" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">Payment Gateways</h4>
+                                <div className="p-4 bg-secondary rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <ApiCredentialInput label="Paystack Secret Key" value={apiKeys.paystackKey} name="paystackKey" onChange={handleApiKeyChange} />
+                                <ApiCredentialInput label="Flutterwave Secret Key" value={apiKeys.flutterwaveKey} name="flutterwaveKey" onChange={handleApiKeyChange} />
+                                <ApiCredentialInput label="Monnify Secret Key" value={apiKeys.monnifyKey} name="monnifyKey" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="text-lg font-bold mb-4">Notification Settings</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="reminderDays" className="block text-sm font-medium text-text-secondary mb-1">Lease End Reminder Days</label>
+                                <input 
+                                    id="reminderDays"
+                                    type="text" 
+                                    value={leaseEndReminderDays} 
+                                    onChange={e => setLeaseEndReminderDays(e.target.value)} 
+                                    className="w-full bg-secondary p-2 rounded border border-border" 
+                                    placeholder="e.g., 90, 60, 30"
+                                />
+                                <p className="text-xs text-text-secondary mt-1">Enter days before lease expiry, separated by commas.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                        <button className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Settings</button>
+                    </div>
                 </div>
-                
-                 <div className="flex justify-end">
-                    <button className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Settings</button>
-                 </div>
-            </div>
+            )}
 
             <Modal isOpen={isRoleModalOpen} onClose={() => setIsRoleModalOpen(false)} title={selectedRole ? 'Edit Role' : 'Add New Role'}>
                 <RoleForm role={selectedRole} onSave={handleSaveRole} onClose={() => setIsRoleModalOpen(false)} />

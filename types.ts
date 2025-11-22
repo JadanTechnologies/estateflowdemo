@@ -1,7 +1,4 @@
 
-
-
-
 export enum PropertyStatus {
   Vacant = 'Vacant',
   Occupied = 'Occupied',
@@ -290,4 +287,87 @@ export interface AuditLogEntry {
   action: string;
   details: string;
   targetId?: string; // ID of the property, tenant, user etc.
+}
+
+// Landing Page Configuration Types
+export interface LandingPageFeature {
+    title: string;
+    description: string;
+    icon: string;
+}
+
+export interface LandingPagePricingPlan {
+    name: string;
+    price: string;
+    period: string;
+    features: string[];
+    highlighted?: boolean;
+}
+
+export interface LandingPageFaq {
+    question: string;
+    answer: string;
+}
+
+export interface LandingPageTestimonial {
+    name: string;
+    role: string;
+    comment: string;
+    avatarUrl?: string;
+}
+
+export interface LandingPageBlogPost {
+    title: string;
+    excerpt: string;
+    date: string;
+    imageUrl?: string;
+}
+
+export interface LandingPageConfig {
+    hero: {
+        title: string;
+        subtitle: string;
+        ctaText: string;
+    };
+    about: {
+        title: string;
+        description: string;
+        imageUrl?: string;
+    };
+    features: {
+        title: string;
+        subtitle: string;
+        items: LandingPageFeature[];
+    };
+    howItWorks: {
+        title: string;
+        steps: { title: string; description: string }[];
+    };
+    pricing: {
+        title: string;
+        subtitle: string;
+        plans: LandingPagePricingPlan[];
+    };
+    testimonials: {
+        title: string;
+        items: LandingPageTestimonial[];
+    };
+    faqs: {
+        title: string;
+        items: LandingPageFaq[];
+    };
+    blog: {
+        title: string;
+        posts: LandingPageBlogPost[];
+    };
+    legal: {
+        privacyPolicy: string;
+        termsOfService: string;
+        refundPolicy: string;
+    };
+    contact: {
+        email: string;
+        phone: string;
+        address: string;
+    };
 }
