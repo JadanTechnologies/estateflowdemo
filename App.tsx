@@ -795,28 +795,33 @@ const App = () => {
             return <AccessDenied />;
         }
 
-        // Props for Settings Component including branding
+        // Props for Settings Component including branding and platform management actions
         const brandingProps = {
             branding: { platformName, companyEmail, companyPhone, companyAddress, currency, logoUrl },
             setBranding: { setPlatformName, setCompanyEmail, setCompanyPhone, setCompanyAddress, setCurrency, setLogoUrl }
         };
 
+        // Props specific for Platform Owner management within Settings
+        const platformManagementProps = {
+            landingPageConfig,
+            platformConfig,
+            onSaveLandingPageConfig: handleLandingPageConfigSave,
+            onSavePlatformConfig: handlePlatformConfigSave,
+            onUpdateUser: handleUpdateUser,
+            onDeleteUser: handleDeleteUser,
+            onAddStaffUser: handleAddStaffUser,
+            templates: templates,
+            setTemplates: setTemplates,
+            onSendGlobalNotification: onSendGlobalNotification
+        };
+
         switch(pageToRender) {
           case 'platform-dashboard': 
-            // Platform dashboard manages everything internally via tabs, but we pass props for actions
+            // Simplified Dashboard: Just Overview & Cards
             return <PlatformDashboard 
                 users={users} 
                 roles={roles} 
                 landingPageConfig={landingPageConfig} 
-                platformConfig={platformConfig}
-                onSaveLandingPageConfig={handleLandingPageConfigSave} 
-                onSavePlatformConfig={handlePlatformConfigSave}
-                onUpdateUser={handleUpdateUser} 
-                onDeleteUser={handleDeleteUser} 
-                onAddStaffUser={handleAddStaffUser}
-                templates={templates} // Pass templates
-                setTemplates={setTemplates}
-                onSendGlobalNotification={onSendGlobalNotification} // Pass communication func
             />;
           case 'dashboard': return <Dashboard {...visibleData} currentUser={staffUser!} />;
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
@@ -826,12 +831,12 @@ const App = () => {
           case 'reports': return <Reports {...visibleData} currentUser={staffUser!} />;
           case 'agents': return <Agents {...visibleData} setAgents={setAgents} currentUser={staffUser!} userHasPermission={userHasPermission} commissionPayments={commissionPayments} setCommissionPayments={setCommissionPayments} addAuditLog={addAuditLog} />;
           case 'users': return <Users {...visibleData} setUsers={setUsers} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
-          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={handleLandingPageConfigSave} {...brandingProps} />;
+          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={handleLandingPageConfigSave} {...brandingProps} {...platformManagementProps} />;
           case 'emaillog': return <EmailLog emailLog={emailLog} />;
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;
           case 'auditlog': return <AuditLog auditLog={auditLog} />;
-          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} platformConfig={platformConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onSavePlatformConfig={handlePlatformConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddStaffUser={handleAddStaffUser} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification}/> : <Dashboard {...visibleData} currentUser={staffUser!} />;
+          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
         }
     };
 

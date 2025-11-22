@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry, LandingPageConfig } from '../types';
+import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry, LandingPageConfig, PlatformConfig, LandingPagePricingPlan } from '../types';
 import { ALL_PERMISSIONS } from '../constants';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TemplateManager from '../components/TemplateManager';
 import CommunicationForm from '../components/CommunicationForm';
 import LandingPageEditor from '../components/LandingPageEditor';
+import UserForm from '../components/UserForm';
 
 
 interface RoleFormProps {
@@ -135,6 +136,104 @@ const DepartmentForm: React.FC<{
     );
 }
 
+// Sub-component for Plan Editing (Moved from PlatformDashboard)
+const PlanEditor: React.FC<{ plan: Partial<LandingPagePricingPlan> | null, onSave: (p: LandingPagePricingPlan) => void, onClose: () => void }> = ({ plan, onSave, onClose }) => {
+    const [formData, setFormData] = useState<Partial<LandingPagePricingPlan>>(plan || {
+        name: '', price: '', period: '/mo', features: [], 
+        maxProperties: 5, maxUsers: 1, maxTenants: 10,
+        enableAiReports: false, enableSms: false, highlighted: false
+    });
+    const [featureInput, setFeatureInput] = useState('');
+
+    const handleChange = (field: keyof LandingPagePricingPlan, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const addFeature = () => {
+        if (featureInput.trim()) {
+            setFormData(prev => ({ ...prev, features: [...(prev.features || []), featureInput] }));
+            setFeatureInput('');
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ 
+            id: plan?.id || `plan-${Date.now()}`,
+            ...formData
+        } as LandingPagePricingPlan);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold mb-1">Plan Name</label>
+                    <input required value={formData.name} onChange={e => handleChange('name', e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g. Starter" />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold mb-1">Price (Display)</label>
+                    <input required value={formData.price} onChange={e => handleChange('price', e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g. ₦5,000" />
+                </div>
+            </div>
+            
+            <div className="border-t border-border pt-4">
+                <h4 className="font-bold mb-2 text-primary">System Limits</h4>
+                <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-xs text-text-secondary mb-1">Max Properties</label>
+                        <input type="number" value={formData.maxProperties} onChange={e => handleChange('maxProperties', parseInt(e.target.value))} className="w-full bg-secondary p-2 rounded border border-border" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-text-secondary mb-1">Max Users</label>
+                        <input type="number" value={formData.maxUsers} onChange={e => handleChange('maxUsers', parseInt(e.target.value))} className="w-full bg-secondary p-2 rounded border border-border" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-text-secondary mb-1">Max Tenants</label>
+                        <input type="number" value={formData.maxTenants} onChange={e => handleChange('maxTenants', parseInt(e.target.value))} className="w-full bg-secondary p-2 rounded border border-border" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="border-t border-border pt-4">
+                <h4 className="font-bold mb-2 text-primary">Feature Gates</h4>
+                <div className="flex gap-4">
+                    <label className="flex items-center space-x-2">
+                        <input type="checkbox" checked={formData.enableAiReports} onChange={e => handleChange('enableAiReports', e.target.checked)} />
+                        <span>AI Reports</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                        <input type="checkbox" checked={formData.enableSms} onChange={e => handleChange('enableSms', e.target.checked)} />
+                        <span>SMS Notifications</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                        <input type="checkbox" checked={formData.highlighted} onChange={e => handleChange('highlighted', e.target.checked)} />
+                        <span>Highlight on Landing Page</span>
+                    </label>
+                </div>
+            </div>
+
+            <div className="border-t border-border pt-4">
+                <h4 className="font-bold mb-2 text-primary">Display Features (Bullet Points)</h4>
+                <div className="flex gap-2 mb-2">
+                    <input value={featureInput} onChange={e => setFeatureInput(e.target.value)} className="flex-1 bg-secondary p-2 rounded border border-border" placeholder="e.g. Priority Support" />
+                    <button type="button" onClick={addFeature} className="bg-blue-600 px-3 rounded text-white">+</button>
+                </div>
+                <ul className="list-disc pl-5 text-sm text-text-secondary">
+                    {formData.features?.map((f, i) => (
+                        <li key={i}>{f}</li>
+                    ))}
+                </ul>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+                <button type="button" onClick={onClose} className="bg-gray-600 px-4 py-2 rounded text-white">Cancel</button>
+                <button type="submit" className="bg-primary px-4 py-2 rounded text-white font-bold">Save Plan</button>
+            </div>
+        </form>
+    );
+}
+
 const ApiCredentialInput: React.FC<{ label: string, value: string, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, type?: string }> = ({ label, value, name, onChange, type = 'password' }) => {
     const [isVisible, setIsVisible] = useState(false);
     return (
@@ -201,9 +300,16 @@ interface SettingsProps {
         setCurrency: (v: string) => void;
         setLogoUrl: (v: string) => void;
     };
+    
+    // Platform Owner specific props
+    platformConfig?: PlatformConfig;
+    onSavePlatformConfig?: (config: PlatformConfig) => void;
+    onUpdateUser?: (userId: string, updates: Partial<User>) => void;
+    onDeleteUser?: (userId: string) => void;
+    onAddStaffUser?: (user: User, password?: string) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog, landingPageConfig, setLandingPageConfig, branding, setBranding }) => {
+const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog, landingPageConfig, setLandingPageConfig, branding, setBranding, platformConfig, onSavePlatformConfig, onUpdateUser, onDeleteUser, onAddStaffUser }) => {
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -215,6 +321,12 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const [isDeptConfirmOpen, setIsDeptConfirmOpen] = useState(false);
     const [deptToDelete, setDeptToDelete] = useState<string | null>(null);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+    // Platform Owner Specific State
+    const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+    const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+    const [editingPlan, setEditingPlan] = useState<Partial<LandingPagePricingPlan> | null>(null);
+    const [businessSearchTerm, setBusinessSearchTerm] = useState('');
 
     const canManageSettings = userHasPermission(Permission.MANAGE_SETTINGS);
     const canManageRoles = userHasPermission(Permission.MANAGE_ROLES);
@@ -320,17 +432,291 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
         addAuditLog('UPDATED_LANDING_PAGE', 'Updated landing page configuration.');
     };
 
+    // Platform Owner Helpers
+    const superAdminRole = roles.find(r => r.name === 'Super Admin');
+    const platformOwnerRole = roles.find(r => r.name === 'Platform Owner');
+    const businessAdmins = users.filter(u => u.roleId === superAdminRole?.id);
+    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id); 
+    const platformRoles = roles.filter(r => 
+        r.name !== 'Super Admin' && 
+        r.name !== 'Property Manager' && 
+        r.name !== 'Agent' && 
+        r.name !== 'Accountant'
+    );
+
+    const handlePlanSave = (plan: LandingPagePricingPlan) => {
+        const updatedPlans = editingPlan && landingPageConfig.pricing.plans.find(p => p.id === plan.id)
+            ? landingPageConfig.pricing.plans.map(p => p.id === plan.id ? plan : p)
+            : [...landingPageConfig.pricing.plans, plan];
+        
+        setLandingPageConfig({
+            ...landingPageConfig,
+            pricing: { ...landingPageConfig.pricing, plans: updatedPlans }
+        });
+        addAuditLog('UPDATED_PRICING_PLAN', `Updated/Created pricing plan: ${plan.name}`);
+        setIsPlanModalOpen(false);
+        setEditingPlan(null);
+    };
+
+    const handleDeletePlan = (planId: string) => {
+        if(window.confirm("Are you sure you want to delete this plan?")) {
+            const updatedPlans = landingPageConfig.pricing.plans.filter(p => p.id !== planId);
+            setLandingPageConfig({
+                ...landingPageConfig,
+                pricing: { ...landingPageConfig.pricing, plans: updatedPlans }
+            });
+            addAuditLog('DELETED_PRICING_PLAN', `Deleted pricing plan ID: ${planId}`);
+        }
+    };
+
+    const handleTrialDurationChange = (days: number) => {
+        if (onSavePlatformConfig && platformConfig) {
+            onSavePlatformConfig({ ...platformConfig, defaultTrialDurationDays: days });
+        }
+    };
+
+    const handlePlatformBankDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (onSavePlatformConfig && platformConfig) {
+            const { name, value } = e.target;
+            onSavePlatformConfig({
+                ...platformConfig,
+                subscriptionBankDetails: {
+                    ...(platformConfig.subscriptionBankDetails || { bankName: '', accountName: '', accountNumber: '' }),
+                    [name]: value
+                }
+            });
+        }
+    };
+
+    const toggleUserStatus = (user: User) => {
+        if (onUpdateUser) {
+            onUpdateUser(user.id, { status: user.status === 'Active' ? 'Suspended' : 'Active' });
+        }
+    };
+
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Settings</h2>
+            <h2 className="text-2xl font-bold mb-6">Settings & Configuration</h2>
             
-            <div className="flex border-b border-border mb-6">
-                <button onClick={() => setActiveTab('general')} className={`px-4 py-2 font-medium ${activeTab === 'general' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>General</button>
-                {canManageSettings && isPlatformOwner && <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>}
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-border mb-6 overflow-x-auto no-scrollbar">
+                <button onClick={() => setActiveTab('general')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'general' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>General</button>
+                
+                {isPlatformOwner && (
+                    <>
+                        <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>
+                        <button onClick={() => setActiveTab('businesses')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'businesses' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Businesses</button>
+                        <button onClick={() => setActiveTab('staff')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'staff' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Staff</button>
+                        <button onClick={() => setActiveTab('plans')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'plans' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Plans & Config</button>
+                        <button onClick={() => setActiveTab('communications')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'communications' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Communications</button>
+                        <button onClick={() => setActiveTab('templates')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'templates' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Templates</button>
+                        <button onClick={() => setActiveTab('payment')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'payment' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Payment Settings</button>
+                    </>
+                )}
             </div>
 
-            {activeTab === 'landing' && canManageSettings && isPlatformOwner ? (
+            {activeTab === 'landing' && isPlatformOwner ? (
                 <LandingPageEditor config={landingPageConfig} onSave={handleLandingPageSave} />
+            ) : activeTab === 'businesses' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-bold">Tenant Businesses</h3>
+                        <input 
+                            type="text" 
+                            placeholder="Search businesses..." 
+                            className="bg-card p-2 rounded border border-border w-64 focus:ring-1 focus:ring-primary focus:outline-none"
+                            value={businessSearchTerm}
+                            onChange={e => setBusinessSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="bg-card rounded-lg shadow overflow-x-auto">
+                        <table className="w-full text-left whitespace-nowrap">
+                            <thead className="bg-secondary border-b border-border text-text-secondary">
+                                <tr>
+                                    <th className="p-4">Business Name</th>
+                                    <th className="p-4">Admin Email</th>
+                                    <th className="p-4">Plan</th>
+                                    <th className="p-4">Status</th>
+                                    <th className="p-4">Expiry</th>
+                                    <th className="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {businessAdmins.filter(u => u.name.toLowerCase().includes(businessSearchTerm.toLowerCase())).map(admin => (
+                                    <tr key={admin.id} className="hover:bg-secondary/20">
+                                        <td className="p-4 font-medium">
+                                            <div>{admin.name}</div>
+                                            {admin.businessProfile && <div className="text-xs text-text-secondary">{admin.businessProfile.country} • {admin.businessProfile.currency}</div>}
+                                        </td>
+                                        <td className="p-4 text-sm text-text-secondary">{admin.username}</td>
+                                        <td className="p-4"><span className="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs border border-blue-700">{admin.subscriptionPlan}</span></td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-1 rounded text-xs ${admin.subscriptionStatus === 'Active' ? 'bg-green-900 text-green-200' : admin.subscriptionStatus === 'Trial' ? 'bg-yellow-900 text-yellow-200' : 'bg-red-900 text-red-200'}`}>
+                                                {admin.subscriptionStatus}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-sm">{admin.subscriptionExpiry}</td>
+                                        <td className="p-4 space-x-2">
+                                            <button onClick={() => toggleUserStatus(admin)} className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">
+                                                {admin.status === 'Active' ? 'Suspend' : 'Activate'}
+                                            </button>
+                                            {onDeleteUser && (
+                                                <button onClick={() => onDeleteUser(admin.id)} className="text-xs bg-red-700 hover:bg-red-600 px-2 py-1 rounded">Delete</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : activeTab === 'staff' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-bold">Platform Staff</h3>
+                        <button onClick={() => setIsStaffModalOpen(true)} className="bg-primary hover:bg-primary-hover px-4 py-2 rounded font-bold text-white">Add Staff Member</button>
+                    </div>
+                    <p className="text-text-secondary">Manage internal team members who help run the platform (Support, Content, Sales).</p>
+                    <div className="bg-card rounded-lg shadow overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-secondary border-b border-border text-text-secondary">
+                                <tr>
+                                    <th className="p-4">Name</th>
+                                    <th className="p-4">Email</th>
+                                    <th className="p-4">Role</th>
+                                    <th className="p-4">Status</th>
+                                    <th className="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {staffUsers.map(user => (
+                                    <tr key={user.id} className="hover:bg-secondary/20">
+                                        <td className="p-4">{user.name}</td>
+                                        <td className="p-4 text-sm text-text-secondary">{user.username}</td>
+                                        <td className="p-4">{roles.find(r => r.id === user.roleId)?.name}</td>
+                                        <td className="p-4"><span className={`px-2 py-1 rounded-full text-xs ${user.status === 'Active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{user.status}</span></td>
+                                        <td className="p-4 space-x-2">
+                                            {user.roleId !== platformOwnerRole?.id && (
+                                                <>
+                                                    <button onClick={() => toggleUserStatus(user)} className="text-yellow-400 text-sm hover:underline">{user.status === 'Active' ? 'Suspend' : 'Activate'}</button>
+                                                    {onDeleteUser && (
+                                                        <button onClick={() => onDeleteUser(user.id)} className="text-red-400 text-sm hover:underline">Delete</button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : activeTab === 'communications' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <h3 className="text-xl font-bold">Global Communication Center</h3>
+                    <p className="text-text-secondary">Broadcast system-wide messages to all businesses or internal platform staff.</p>
+                    <div className="bg-card p-6 rounded-lg border border-border">
+                        <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
+                    </div>
+                </div>
+            ) : activeTab === 'templates' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <h3 className="text-xl font-bold">Global System Notification Templates</h3>
+                    <p className="text-text-secondary">Manage the default templates available for system notifications. These are distinct from tenant-specific templates.</p>
+                    <div className="bg-card p-6 rounded-lg border border-border">
+                        <TemplateManager templates={templates} setTemplates={setTemplates} />
+                    </div>
+                </div>
+            ) : activeTab === 'payment' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <h3 className="text-xl font-bold">Platform Payment Settings</h3>
+                    <p className="text-text-secondary">Configure how the platform receives subscription payments from business clients.</p>
+                    
+                    <div className="bg-card p-6 rounded-lg border border-border max-w-xl">
+                        <h3 className="text-lg font-bold mb-4">Subscription Bank Details</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Bank Name</label>
+                                <input 
+                                    name="bankName" 
+                                    value={platformConfig?.subscriptionBankDetails?.bankName || ''} 
+                                    onChange={handlePlatformBankDetailsChange}
+                                    className="w-full bg-secondary p-2 rounded border border-border" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Account Name</label>
+                                <input 
+                                    name="accountName" 
+                                    value={platformConfig?.subscriptionBankDetails?.accountName || ''} 
+                                    onChange={handlePlatformBankDetailsChange}
+                                    className="w-full bg-secondary p-2 rounded border border-border" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Account Number</label>
+                                <input 
+                                    name="accountNumber" 
+                                    value={platformConfig?.subscriptionBankDetails?.accountNumber || ''} 
+                                    onChange={handlePlatformBankDetailsChange}
+                                    className="w-full bg-secondary p-2 rounded border border-border" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : activeTab === 'plans' && isPlatformOwner ? (
+                <div className="space-y-8 animate-fade-in">
+                    <h3 className="text-xl font-bold">System Configuration</h3>
+                    
+                    {/* Trial Settings */}
+                    <div className="bg-card p-6 rounded-lg border border-border">
+                        <h4 className="text-lg font-bold mb-4">Trial Management</h4>
+                        <div className="flex items-center gap-4">
+                            <label className="text-text-secondary">Global Trial Duration (Days):</label>
+                            <input 
+                                type="number" 
+                                value={platformConfig?.defaultTrialDurationDays || 14} 
+                                onChange={e => handleTrialDurationChange(Number(e.target.value))}
+                                className="bg-secondary p-2 rounded border border-border w-24 text-center"
+                            />
+                            <span className="text-sm text-text-secondary">New signups will get this many days free.</span>
+                        </div>
+                    </div>
+
+                    {/* Pricing Plans */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-lg font-bold">Pricing Plans & Feature Gating</h4>
+                            <button onClick={() => { setEditingPlan({}); setIsPlanModalOpen(true); }} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-bold text-white">Create New Plan</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {landingPageConfig.pricing.plans.map(plan => (
+                                <div key={plan.id} className={`bg-card p-6 rounded-lg border ${plan.highlighted ? 'border-primary shadow-[0_0_15px_rgba(79,70,229,0.2)]' : 'border-border'} relative`}>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 className="text-lg font-bold">{plan.name}</h4>
+                                            <p className="text-2xl font-extrabold text-primary">{plan.price}<span className="text-sm text-text-secondary">{plan.period}</span></p>
+                                        </div>
+                                        {plan.highlighted && <span className="bg-primary text-xs px-2 py-1 rounded text-white">Popular</span>}
+                                    </div>
+                                    
+                                    <div className="space-y-2 mb-6 text-sm text-text-secondary">
+                                        <p><strong>Max Properties:</strong> {plan.maxProperties === -1 ? 'Unlimited' : plan.maxProperties}</p>
+                                        <p><strong>Max Users:</strong> {plan.maxUsers === -1 ? 'Unlimited' : plan.maxUsers}</p>
+                                        <p><strong>AI Reports:</strong> <span className={plan.enableAiReports ? 'text-green-400' : 'text-red-400'}>{plan.enableAiReports ? 'Enabled' : 'Disabled'}</span></p>
+                                        <p><strong>SMS Notifs:</strong> <span className={plan.enableSms ? 'text-green-400' : 'text-red-400'}>{plan.enableSms ? 'Enabled' : 'Disabled'}</span></p>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button onClick={() => { setEditingPlan(plan); setIsPlanModalOpen(true); }} className="flex-1 bg-secondary hover:bg-gray-700 py-2 rounded border border-border text-sm">Edit</button>
+                                        <button onClick={() => handleDeletePlan(plan.id)} className="flex-1 bg-red-900/20 hover:bg-red-900/40 text-red-400 py-2 rounded border border-red-900/30 text-sm">Delete</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             ) : (
                 <div className="space-y-8 max-w-4xl">
                     <div className="bg-card p-6 rounded-lg shadow-lg">
@@ -411,7 +797,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                             </div>
                         </div>
                     )}
-                    {canManageRoles && (
+                    {canManageRoles && !isPlatformOwner && ( // Platform Owner usually doesn't edit their own role system in this view, or handled differently
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-bold">Role Management</h3>
@@ -580,6 +966,22 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                 title="Confirm Data Reset"
                 message="Are you sure you want to reset all application data? This action is permanent and will restore the application to its initial state."
             />
+
+            {/* Add Staff Modal */}
+            <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title="Add Platform Staff">
+                <UserForm 
+                    user={null} 
+                    roles={platformRoles} 
+                    departments={[]} 
+                    onSave={(user, pass) => { onAddStaffUser && onAddStaffUser(user, pass); setIsStaffModalOpen(false); }} 
+                    onClose={() => setIsStaffModalOpen(false)} 
+                />
+            </Modal>
+
+            {/* Plan Editor Modal */}
+            <Modal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} title={editingPlan?.id ? "Edit Pricing Plan" : "Create Pricing Plan"}>
+                <PlanEditor plan={editingPlan} onSave={handlePlanSave} onClose={() => setIsPlanModalOpen(false)} />
+            </Modal>
         </div>
     );
 };
