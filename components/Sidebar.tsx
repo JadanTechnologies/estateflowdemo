@@ -22,7 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentUser, activePage, setActivePag
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
         {accessibleLinks.map((link) => {
-          const pageName = link.name.toLowerCase();
+          // FIX: Derive page name from href (removing #) to match App.tsx switch keys (e.g., 'emaillog' instead of 'email log')
+          const pageName = link.href.replace('#', '');
           const isActive = activePage === pageName || (activePage === 'dashboard' && link.name === 'Dashboard');
           return (
             <a

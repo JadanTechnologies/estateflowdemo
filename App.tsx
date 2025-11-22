@@ -84,7 +84,7 @@ const initialRoles: Role[] = [
         Permission.VIEW_TENANTS, Permission.MANAGE_TENANTS, Permission.VIEW_PAYMENTS,
         Permission.MANAGE_PAYMENTS, Permission.VIEW_MAINTENANCE, Permission.MANAGE_MAINTENANCE,
         Permission.VIEW_AGENTS, Permission.MANAGE_AGENTS, Permission.VIEW_REPORTS, Permission.MANAGE_USERS,
-        Permission.VIEW_EMAIL_LOG, Permission.VIEW_PUSH_LOG, Permission.VIEW_SMS_LOG,
+        Permission.VIEW_EMAIL_LOG, Permission.VIEW_PUSH_LOG, Permission.VIEW_SMS_LOG, Permission.VIEW_AUDIT_LOG,
         Permission.MANAGE_NOTIFICATIONS, Permission.MANAGE_COMMUNICATIONS,
       ]
     },
