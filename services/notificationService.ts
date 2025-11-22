@@ -54,18 +54,24 @@ export const sendEmail = (
     if (!recipient.email) {
         return { success: false, message: "Recipient has no email address." };
     }
+    
+    // 2. Check for Resend Key
+    if (!apiKeys.resendApiKey) {
+        console.warn("Resend API Key not configured. Email sending simulated.");
+    }
 
-    // 2. Simulate Resend API Call
+    // 3. Simulate Resend API Call
     console.log(`
     --- SIMULATING RESEND EMAIL ---
     To: ${recipient.name} <${recipient.email}>
     Subject: ${subject}
     Body: ${body}
     Provider: Resend (Simulated)
+    API Key: ${apiKeys.resendApiKey ? 'Configured' : 'Missing'}
     -------------------------------
     `);
 
-    // 3. Create Log Entry
+    // 4. Create Log Entry
     const logEntry: EmailLogEntry = {
         id: `email_${Date.now()}`,
         timestamp: new Date().toISOString(),

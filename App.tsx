@@ -194,6 +194,7 @@ const initialAnnouncements: Announcement[] = [
 const initialApiKeys: ApiKeys = {
   twilioSid: '',
   twilioToken: '',
+  resendApiKey: '', // Added missing property
   firebaseKey: '',
   paystackKey: '',
   flutterwaveKey: '',

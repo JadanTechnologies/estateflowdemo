@@ -218,6 +218,14 @@ export interface User {
   subscriptionStatus?: 'Active' | 'Expired' | 'Trial';
   subscriptionExpiry?: string;
   
+  // For platform approval simulation
+  pendingSubscriptionPayment?: {
+      amount: number;
+      date: string;
+      method: string;
+      proofUrl?: string;
+  };
+  
   // Business Settings
   businessProfile?: BusinessProfile;
 }
@@ -280,6 +288,7 @@ export interface SmsLogEntry {
 export interface ApiKeys {
     twilioSid: string;
     twilioToken: string;
+    resendApiKey: string; // New: Resend
     firebaseKey: string;
     paystackKey: string;
     flutterwaveKey: string;

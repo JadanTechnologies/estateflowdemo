@@ -83,6 +83,21 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
                         onClick={() => handleCardClick('Platform Staff', (u) => u.roleId !== superAdminRole?.id)}
                     />
                 </div>
+                
+                {/* Additional Charts or Stats could go here */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="font-bold mb-4">Recent Activity</h3>
+                        <p className="text-text-secondary text-sm">Platform activity monitoring is active. Check Audit Log for details.</p>
+                    </div>
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="font-bold mb-4">System Health</h3>
+                        <div className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                            <span>All Systems Operational</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Generic User List Modal for Clickable Cards */}

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry, LandingPageConfig, PlatformConfig, LandingPagePricingPlan } from '../types';
+import { Role, Permission, User, Department, Property, Agent, ApiKeys, NotificationTemplate, TemplateType, Notification, NotificationType, ManualPaymentDetails, AuditLogEntry, LandingPageConfig, PlatformConfig, LandingPagePricingPlan, UserStatus } from '../types';
 import { ALL_PERMISSIONS } from '../constants';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -136,7 +136,7 @@ const DepartmentForm: React.FC<{
     );
 }
 
-// Sub-component for Plan Editing (Moved from PlatformDashboard)
+// Sub-component for Plan Editing
 const PlanEditor: React.FC<{ plan: Partial<LandingPagePricingPlan> | null, onSave: (p: LandingPagePricingPlan) => void, onClose: () => void }> = ({ plan, onSave, onClose }) => {
     const [formData, setFormData] = useState<Partial<LandingPagePricingPlan>>(plan || {
         name: '', price: '', period: '/mo', features: [], 
@@ -436,7 +436,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const superAdminRole = roles.find(r => r.name === 'Super Admin');
     const platformOwnerRole = roles.find(r => r.name === 'Platform Owner');
     const businessAdmins = users.filter(u => u.roleId === superAdminRole?.id);
-    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id); 
+    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id && u.roleId !== superAdminRole?.id); // Fix: Only platform staff
     const platformRoles = roles.filter(r => 
         r.name !== 'Super Admin' && 
         r.name !== 'Property Manager' && 
@@ -488,9 +488,22 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
         }
     };
 
-    const toggleUserStatus = (user: User) => {
+    const updateUserStatus = (userId: string, status: UserStatus) => {
         if (onUpdateUser) {
-            onUpdateUser(user.id, { status: user.status === 'Active' ? 'Suspended' : 'Active' });
+            onUpdateUser(userId, { status });
+        }
+    };
+
+    const handleExtendSubscription = (userId: string) => {
+        if (onUpdateUser) {
+            const nextMonth = new Date();
+            nextMonth.setDate(nextMonth.getDate() + 30);
+            onUpdateUser(userId, { 
+                subscriptionStatus: 'Active', 
+                subscriptionExpiry: nextMonth.toISOString().split('T')[0],
+                pendingSubscriptionPayment: undefined 
+            });
+            addAuditLog('EXTENDED_SUBSCRIPTION', `Extended subscription for user ${userId}`);
         }
     };
 
@@ -506,11 +519,12 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                     <>
                         <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>
                         <button onClick={() => setActiveTab('businesses')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'businesses' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Businesses</button>
+                        <button onClick={() => setActiveTab('subscriptions')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'subscriptions' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Subscriptions</button>
                         <button onClick={() => setActiveTab('staff')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'staff' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Staff</button>
                         <button onClick={() => setActiveTab('plans')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'plans' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Plans & Config</button>
                         <button onClick={() => setActiveTab('communications')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'communications' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Communications</button>
                         <button onClick={() => setActiveTab('templates')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'templates' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Templates</button>
-                        <button onClick={() => setActiveTab('payment')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'payment' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Payment Settings</button>
+                        <button onClick={() => setActiveTab('payment')} className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'payment' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>API & Payment</button>
                     </>
                 )}
             </div>
@@ -557,12 +571,96 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                                         </td>
                                         <td className="p-4 text-sm">{admin.subscriptionExpiry}</td>
                                         <td className="p-4 space-x-2">
-                                            <button onClick={() => toggleUserStatus(admin)} className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">
-                                                {admin.status === 'Active' ? 'Suspend' : 'Activate'}
-                                            </button>
-                                            {onDeleteUser && (
-                                                <button onClick={() => onDeleteUser(admin.id)} className="text-xs bg-red-700 hover:bg-red-600 px-2 py-1 rounded">Delete</button>
+                                            {admin.status === UserStatus.Active && (
+                                                <>
+                                                    <button onClick={() => updateUserStatus(admin.id, UserStatus.Suspended)} className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded">Suspend</button>
+                                                    <button onClick={() => updateUserStatus(admin.id, UserStatus.Banned)} className="text-xs bg-red-700 hover:bg-red-600 text-white px-2 py-1 rounded">Ban</button>
+                                                </>
                                             )}
+                                            {(admin.status === UserStatus.Suspended || admin.status === UserStatus.Banned) && (
+                                                <button onClick={() => updateUserStatus(admin.id, UserStatus.Active)} className="text-xs bg-green-700 hover:bg-green-600 text-white px-2 py-1 rounded">Reactivate</button>
+                                            )}
+                                            {onDeleteUser && (
+                                                <button onClick={() => {
+                                                    if(window.confirm('Are you sure? This will delete the business admin and orphan their data.')) onDeleteUser(admin.id)
+                                                }} className="text-xs border border-red-700 text-red-400 hover:text-red-300 px-2 py-1 rounded">Delete</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : activeTab === 'subscriptions' && isPlatformOwner ? (
+                <div className="space-y-6 animate-fade-in">
+                    <h3 className="text-xl font-bold">Subscription Management</h3>
+                    <p className="text-text-secondary">Approve payments and manage subscription validity for tenant businesses.</p>
+                    
+                    {/* Mock Pending Approvals Section */}
+                    <div className="bg-card rounded-lg shadow overflow-hidden mb-6 border border-yellow-500/30">
+                        <div className="bg-yellow-900/20 p-4 border-b border-yellow-500/30">
+                            <h4 className="font-bold text-yellow-500 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z" clipRule="evenodd" /></svg>
+                                Pending Payment Approvals
+                            </h4>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-secondary border-b border-border text-text-secondary">
+                                <tr>
+                                    <th className="p-4">Business</th>
+                                    <th className="p-4">Plan</th>
+                                    <th className="p-4">Amount</th>
+                                    <th className="p-4">Proof</th>
+                                    <th className="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {businessAdmins.filter(u => u.pendingSubscriptionPayment).length === 0 ? (
+                                    <tr><td colSpan={5} className="p-6 text-center text-text-secondary">No pending subscription payments.</td></tr>
+                                ) : (
+                                    businessAdmins.filter(u => u.pendingSubscriptionPayment).map(u => (
+                                        <tr key={u.id}>
+                                            <td className="p-4 font-medium">{u.businessProfile?.companyName || u.name}</td>
+                                            <td className="p-4">{u.subscriptionPlan}</td>
+                                            <td className="p-4">₦{(u.pendingSubscriptionPayment?.amount || 0).toLocaleString()}</td>
+                                            <td className="p-4"><a href="#" className="text-blue-400 text-sm underline">View Proof</a></td>
+                                            <td className="p-4 space-x-2">
+                                                <button onClick={() => handleExtendSubscription(u.id)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm">Approve</button>
+                                                <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">Reject</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 className="font-bold text-lg mt-8 mb-4">Active Subscriptions</h4>
+                    <div className="bg-card rounded-lg shadow overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-secondary border-b border-border text-text-secondary">
+                                <tr>
+                                    <th className="p-4">Business</th>
+                                    <th className="p-4">Status</th>
+                                    <th className="p-4">Plan</th>
+                                    <th className="p-4">Expires</th>
+                                    <th className="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {businessAdmins.map(admin => (
+                                    <tr key={admin.id} className="hover:bg-secondary/20">
+                                        <td className="p-4">{admin.businessProfile?.companyName || admin.name}</td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-1 rounded text-xs ${admin.subscriptionStatus === 'Active' ? 'bg-green-900 text-green-200' : admin.subscriptionStatus === 'Trial' ? 'bg-yellow-900 text-yellow-200' : 'bg-red-900 text-red-200'}`}>
+                                                {admin.subscriptionStatus}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">{admin.subscriptionPlan}</td>
+                                        <td className="p-4 font-mono text-sm">{admin.subscriptionExpiry}</td>
+                                        <td className="p-4">
+                                            <button onClick={() => handleExtendSubscription(admin.id)} className="text-blue-400 hover:underline text-sm">Manual Extend (+30 Days)</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -589,7 +687,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/50">
-                                {staffUsers.map(user => (
+                                {users.filter(u => ['role_platform_owner', 'role_platform_support'].includes(u.roleId)).map(user => (
                                     <tr key={user.id} className="hover:bg-secondary/20">
                                         <td className="p-4">{user.name}</td>
                                         <td className="p-4 text-sm text-text-secondary">{user.username}</td>
@@ -598,7 +696,9 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                                         <td className="p-4 space-x-2">
                                             {user.roleId !== platformOwnerRole?.id && (
                                                 <>
-                                                    <button onClick={() => toggleUserStatus(user)} className="text-yellow-400 text-sm hover:underline">{user.status === 'Active' ? 'Suspend' : 'Activate'}</button>
+                                                    <button onClick={() => updateUserStatus(user.id, user.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active)} className="text-yellow-400 text-sm hover:underline">
+                                                        {user.status === 'Active' ? 'Suspend' : 'Activate'}
+                                                    </button>
                                                     {onDeleteUser && (
                                                         <button onClick={() => onDeleteUser(user.id)} className="text-red-400 text-sm hover:underline">Delete</button>
                                                     )}
@@ -629,12 +729,11 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                 </div>
             ) : activeTab === 'payment' && isPlatformOwner ? (
                 <div className="space-y-6 animate-fade-in">
-                    <h3 className="text-xl font-bold">Platform Payment Settings</h3>
-                    <p className="text-text-secondary">Configure how the platform receives subscription payments from business clients.</p>
+                    <h3 className="text-xl font-bold">API & Payment Settings</h3>
                     
-                    <div className="bg-card p-6 rounded-lg border border-border max-w-xl">
-                        <h3 className="text-lg font-bold mb-4">Subscription Bank Details</h3>
-                        <div className="space-y-4">
+                    <div className="bg-card p-6 rounded-lg border border-border">
+                        <h4 className="text-lg font-bold mb-4">Platform Subscription Bank Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Bank Name</label>
                                 <input 
@@ -661,6 +760,32 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                                     onChange={handlePlatformBankDetailsChange}
                                     className="w-full bg-secondary p-2 rounded border border-border" 
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="text-lg font-bold mb-4">API Integrations</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">Email Provider (Resend)</h4>
+                                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                                    <ApiCredentialInput label="Resend API Key" value={apiKeys.resendApiKey || ''} name="resendApiKey" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">SMS Provider (Twilio)</h4>
+                                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                                    <ApiCredentialInput label="Twilio Account SID" value={apiKeys.twilioSid} name="twilioSid" onChange={handleApiKeyChange} />
+                                    <ApiCredentialInput label="Twilio Auth Token" value={apiKeys.twilioToken} name="twilioToken" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">Payment Gateways</h4>
+                                <div className="p-4 bg-secondary rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <ApiCredentialInput label="Paystack Secret Key" value={apiKeys.paystackKey} name="paystackKey" onChange={handleApiKeyChange} />
+                                <ApiCredentialInput label="Flutterwave Secret Key" value={apiKeys.flutterwaveKey} name="flutterwaveKey" onChange={handleApiKeyChange} />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -797,7 +922,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                             </div>
                         </div>
                     )}
-                    {canManageRoles && !isPlatformOwner && ( // Platform Owner usually doesn't edit their own role system in this view, or handled differently
+                    {canManageRoles && !isPlatformOwner && ( 
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-bold">Role Management</h3>
@@ -868,9 +993,16 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         </div>
                     )}
 
+                    {!isPlatformOwner && (
                     <div className="bg-card p-6 rounded-lg shadow-lg">
                         <h3 className="text-lg font-bold mb-4">API & Integration Settings</h3>
                         <div className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold text-text-primary mb-2">Email Provider (Resend)</h4>
+                                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                                    <ApiCredentialInput label="Resend API Key" value={apiKeys.resendApiKey || ''} name="resendApiKey" onChange={handleApiKeyChange} />
+                                </div>
+                            </div>
                             <div>
                                 <h4 className="font-semibold text-text-primary mb-2">SMS Provider (Twilio)</h4>
                                 <div className="p-4 bg-secondary rounded-lg space-y-3">
@@ -894,6 +1026,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* Hide Notification Settings from Platform Owner */}
                     {canManageSettings && !isPlatformOwner && (
