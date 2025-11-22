@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo } from 'react';
 import { Property, Agent, Department, PropertyStatus, User, Tenant, Permission, Role, AuditLogEntry, PropertyDocument } from '../types';
 import Modal from '../components/Modal';
@@ -30,7 +28,16 @@ const PropertyForm: React.FC<{
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            const nonImageFiles = files.filter((file: File) => !file.type.startsWith('image/'));
+
+            if (nonImageFiles.length > 0) {
+                alert("Only image files are allowed. Please select valid images (e.g., JPG, PNG).");
+                e.target.value = ''; // Reset file input
+                setImageFiles(null);
+                return;
+            }
             setImageFiles(e.target.files);
         }
     };
