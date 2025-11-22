@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Payment, Tenant, Property, Permission, User, Role, PaymentType, PaymentStatus, PaymentMethod, AuditLogEntry } from '../types';
 import Modal from '../components/Modal';
@@ -168,39 +169,45 @@ const Payments: React.FC<{
       </div>
 
       {canManageGlobally && pendingPayments.length > 0 && (
-          <div className="bg-card p-6 rounded-lg shadow-lg mb-6">
-              <h3 className="text-lg font-bold mb-4">Pending Approvals</h3>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 p-6 rounded-lg shadow-lg mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <h3 className="text-lg font-bold text-yellow-500">Pending Payment Approvals ({pendingPayments.length})</h3>
+              </div>
               <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                      <thead className="border-b border-border">
+                      <thead className="border-b border-yellow-500/30 text-yellow-200">
                           <tr>
                               <th className="p-3">Tenant</th>
                               <th className="p-3">Amount</th>
                               <th className="p-3">Method</th>
                               <th className="p-3">Date</th>
-                              <th className="p-3">Notes</th>
                               <th className="p-3">Proof</th>
                               <th className="p-3">Actions</th>
                           </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-yellow-500/20">
                           {pendingPayments.map(p => (
-                              <tr key={p.id} className="border-b border-border/50">
+                              <tr key={p.id}>
                                   <td className="p-3">{getTenantName(p.tenantId)}</td>
                                   <td className="p-3">₦{p.amountPaid.toLocaleString()}</td>
                                   <td className="p-3">{p.paymentMethod}</td>
                                   <td className="p-3">{new Date(p.date).toLocaleDateString()}</td>
-                                  <td className="p-3 text-sm italic text-text-secondary">{p.notes}</td>
                                   <td className="p-3">
                                       {p.proofOfPayment ? (
-                                          <button onClick={() => setViewingProofUrl(p.proofOfPayment!)} className="text-blue-400 hover:underline text-xs">View Proof</button>
+                                          <button onClick={() => setViewingProofUrl(p.proofOfPayment!)} className="text-blue-400 hover:underline text-xs flex items-center gap-1">
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.018 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
+                                              View Proof
+                                          </button>
                                       ) : (
                                           <span className="text-xs text-text-secondary">N/A</span>
                                       )}
                                   </td>
                                   <td className="p-3 space-x-2">
-                                      <button onClick={() => handleApproval(p.id, true)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs">Approve</button>
-                                      <button onClick={() => handleApproval(p.id, false)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs">Reject</button>
+                                      <button onClick={() => handleApproval(p.id, true)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs shadow-sm">Approve</button>
+                                      <button onClick={() => handleApproval(p.id, false)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs shadow-sm">Reject</button>
                                   </td>
                               </tr>
                           ))}

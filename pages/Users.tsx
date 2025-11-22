@@ -143,7 +143,12 @@ const Users: React.FC<UsersProps> = ({ users, setUsers, roles, departments, curr
 
                             return (
                                 <tr key={user.id} className="border-b border-border/50 hover:bg-secondary">
-                                    <td className="p-4">{user.name}</td>
+                                    <td className="p-4">
+                                        <div className="font-medium">{user.name}</div>
+                                        {(role?.name === 'Property Manager' || role?.name === 'Agent') && (
+                                            <div className="text-xs text-text-secondary">{getDepartmentName(user.departmentId)}</div>
+                                        )}
+                                    </td>
                                     <td className="p-4">{user.username}</td>
                                     <td className="p-4">{getRoleName(user.roleId)}</td>
                                     <td className="p-4">
@@ -152,20 +157,66 @@ const Users: React.FC<UsersProps> = ({ users, setUsers, roles, departments, curr
                                         </span>
                                     </td>
                                     {isSuperAdmin && (
-                                        <td className="p-4 space-x-2 whitespace-nowrap">
-                                            <button onClick={() => openFormModal(user)} className="text-blue-400 hover:text-blue-300">Edit</button>
-                                            <button onClick={() => openResetPasswordModal(user)} className="text-yellow-400 hover:text-yellow-300">Reset Password</button>
-                                            <button onClick={() => handleDeleteClick(user.id)} className="text-red-400 hover:text-red-300 disabled:text-gray-500 disabled:cursor-not-allowed" disabled={disableActions}>Delete</button>
-                                            <select 
-                                                value={user.status} 
-                                                onChange={(e) => handleStatusChange(user.id, e.target.value as UserStatus)}
-                                                className="bg-secondary p-1 rounded border border-border text-xs disabled:opacity-50"
-                                                disabled={disableActions}
-                                            >
-                                                {Object.values(UserStatus).map(status => (
-                                                    <option key={status} value={status}>{status}</option>
-                                                ))}
-                                            </select>
+                                        <td className="p-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => openFormModal(user)} className="text-blue-400 hover:text-blue-300 text-sm">Edit</button>
+                                                <button onClick={() => openResetPasswordModal(user)} className="text-yellow-400 hover:text-yellow-300 text-sm">Reset Pass</button>
+                                                
+                                                {!disableActions && (
+                                                    <>
+                                                        <div className="h-4 w-px bg-border mx-1"></div>
+                                                        
+                                                        {/* Status Actions */}
+                                                        {user.status === UserStatus.Active && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleStatusChange(user.id, UserStatus.Suspended)} 
+                                                                    className="text-orange-400 hover:text-orange-300 text-sm"
+                                                                    title="Suspend User"
+                                                                >
+                                                                    Suspend
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleStatusChange(user.id, UserStatus.Banned)} 
+                                                                    className="text-red-500 hover:text-red-400 text-sm"
+                                                                    title="Ban User"
+                                                                >
+                                                                    Ban
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        
+                                                        {(user.status === UserStatus.Suspended || user.status === UserStatus.Banned) && (
+                                                            <button 
+                                                                onClick={() => handleStatusChange(user.id, UserStatus.Active)} 
+                                                                className="text-green-400 hover:text-green-300 text-sm"
+                                                                title="Reactivate User"
+                                                            >
+                                                                Reactivate
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {user.status === UserStatus.Suspended && (
+                                                            <button 
+                                                                onClick={() => handleStatusChange(user.id, UserStatus.Banned)} 
+                                                                className="text-red-500 hover:text-red-400 text-sm"
+                                                                title="Ban User"
+                                                            >
+                                                                Ban
+                                                            </button>
+                                                        )}
+
+                                                        <div className="h-4 w-px bg-border mx-1"></div>
+                                                        <button 
+                                                            onClick={() => handleDeleteClick(user.id)} 
+                                                            className="text-red-600 hover:text-red-500 text-sm font-bold"
+                                                            title="Delete User permanently"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     )}
                                 </tr>
