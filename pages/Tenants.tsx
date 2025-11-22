@@ -34,6 +34,7 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     
+    // Filter properties to show only Vacant ones OR the one currently assigned to this tenant
     const assignableProperties = useMemo(() => {
         return properties.filter(p => p.status === PropertyStatus.Vacant || p.id === tenant?.propertyId);
     }, [properties, tenant]);
@@ -78,6 +79,16 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
         else if (!ninRegex.test(formData.guarantor.nin)) newErrors.guarantornin = "Guarantor NIN must be 11 digits.";
 
         if (!formData.propertyId) newErrors.propertyId = "A property must be assigned.";
+        
+        // Property Validation: Ensure property is vacant OR is the tenant's current property
+        const selectedProperty = properties.find(p => p.id === formData.propertyId);
+        if (selectedProperty) {
+            const isCurrentProperty = tenant?.propertyId === selectedProperty.id;
+            if (selectedProperty.status !== PropertyStatus.Vacant && !isCurrentProperty) {
+                newErrors.propertyId = `Property "${selectedProperty.name}" is currently ${selectedProperty.status}. Please select a vacant property.`;
+            }
+        }
+
         if (!formData.leaseStartDate) newErrors.leaseStartDate = "Lease start date is required.";
         if (!formData.leaseEndDate) newErrors.leaseEndDate = "Lease end date is required.";
         
@@ -92,11 +103,6 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
 
         if (formData.leaseStartDate && formData.leaseEndDate && new Date(formData.leaseStartDate) >= new Date(formData.leaseEndDate)) {
             newErrors.leaseEndDate = "End date must be after start date.";
-        }
-        
-        const selectedProperty = properties.find(p => p.id === formData.propertyId);
-        if (selectedProperty && selectedProperty.status !== PropertyStatus.Vacant && selectedProperty.id !== tenant?.propertyId) {
-            newErrors.propertyId = `Property "${selectedProperty.name}" is currently occupied.`;
         }
         
         if (formData.username?.trim()) {

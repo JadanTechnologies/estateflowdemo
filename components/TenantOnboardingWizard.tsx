@@ -73,6 +73,13 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
 
         if (step === 3) {
             if (!formData.propertyId) newErrors.propertyId = "Property selection is required.";
+            else {
+                const selectedProp = properties.find(p => p.id === formData.propertyId);
+                if (selectedProp && selectedProp.status !== PropertyStatus.Vacant) {
+                    newErrors.propertyId = `Property ${selectedProp.name} is not vacant.`;
+                }
+            }
+
             if (!formData.leaseStartDate) newErrors.leaseStartDate = "Start date is required.";
             if (!formData.leaseEndDate) newErrors.leaseEndDate = "End date is required.";
             if (!formData.rentDueDate) newErrors.rentDueDate = "Rent due date is required.";
