@@ -19,7 +19,7 @@ import AccessDenied from './pages/AccessDenied';
 import ThermalReceipt from './components/ThermalReceipt';
 import TenantDashboard from './pages/TenantDashboard';
 import LandingPage from './pages/LandingPage';
-import PlatformDashboard from './pages/PlatformDashboard'; // Import Platform Dashboard
+import PlatformDashboard from './pages/PlatformDashboard'; 
 import { NAV_LINKS, Logo, INITIAL_LANDING_PAGE_CONFIG } from './constants';
 import { sendSms } from './services/notificationService';
 import { NOTIFICATION_SOUND_BASE64 } from './components/NotificationSound';
@@ -41,36 +41,6 @@ import {
 
 // MOCK DATA
 
-// --- SAMPLE LOGIN CREDENTIALS ---
-//
-// === Platform Owner ===
-// Owner:
-//   - username: owner@estateflow.com
-//   - password: owner123
-//
-// === Staff Logins ===
-// Super Admin:
-//   - username: admin@estateflow.com
-//   - password: admin123
-//
-// Property Manager:
-//   - username: manager@estateflow.com
-//   - password: manager123
-//
-// Accountant:
-//   - username: accountant@estateflow.com
-//   - password: accountant123
-//
-// Agent:
-//   - username: agent@estateflow.com
-//   - password: agent123
-//
-// === Tenant Login ===
-// Tenant:
-//   - username: tenant@estateflow.com
-//   - password: tenant123
-// ------------------------------------
-
 const initialDepartments: Department[] = [
   { id: 'dept_res', name: 'Residential' },
   { id: 'dept_com', name: 'Commercial' },
@@ -84,15 +54,17 @@ const initialRoles: Role[] = [
       name: 'Platform Owner',
       permissions: [
         Permission.VIEW_PLATFORM_DASHBOARD,
-        Permission.MANAGE_USERS,
+        Permission.MANAGE_USERS, // Can manage global users
         Permission.MANAGE_SETTINGS,
-        Permission.VIEW_AUDIT_LOG
+        Permission.MANAGE_ROLES, // Can add staff/roles
+        Permission.VIEW_AUDIT_LOG,
+        Permission.MANAGE_SUBSCRIPTIONS // Can manage payments/subscriptions
       ]
     },
     { 
       id: 'role_super_admin', 
       name: 'Super Admin', 
-      permissions: Object.values(Permission).filter(p => p !== Permission.VIEW_PLATFORM_DASHBOARD) // Super admin has all except platform dashboard
+      permissions: Object.values(Permission).filter(p => p !== Permission.VIEW_PLATFORM_DASHBOARD && p !== Permission.MANAGE_SUBSCRIPTIONS)
     },
     {
       id: 'role_manager',
@@ -124,9 +96,26 @@ const initialRoles: Role[] = [
     }
 ];
 
+const getFutureDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+}
+
 const initialUsers: User[] = [
     { id: 'owner', name: 'Platform Owner', username: 'owner@estateflow.com', password: 'owner123', roleId: 'role_platform_owner', status: UserStatus.Active },
-    { id: 'user1', name: 'Admin User', username: 'admin@estateflow.com', password: 'admin123', roleId: 'role_super_admin', status: UserStatus.Active },
+    { 
+        id: 'user1', 
+        name: 'Admin User', 
+        username: 'admin@estateflow.com', 
+        password: 'admin123', 
+        roleId: 'role_super_admin', 
+        status: UserStatus.Active,
+        // Subscription data for the business admin
+        subscriptionPlan: 'Professional',
+        subscriptionStatus: 'Active',
+        subscriptionExpiry: getFutureDate(30) 
+    },
     { id: 'user2', name: 'Manager User', username: 'manager@estateflow.com', password: 'manager123', roleId: 'role_manager', departmentId: 'dept_res', status: UserStatus.Active },
     { id: 'user3', name: 'Accountant User', username: 'accountant@estateflow.com', password: 'accountant123', roleId: 'role_accountant', status: UserStatus.Active },
     { id: 'agent1', name: 'Agent User', username: 'agent@estateflow.com', password: 'agent123', roleId: 'role_agent', departmentId: 'dept_res', status: UserStatus.Active },
@@ -142,12 +131,6 @@ const initialProperties: Property[] = [
   { id: 'prop2', name: 'Ocean View Apt', unitNumber: 'Apt 2B', location: 'Victoria Island', departmentId: 'dept_res', rentAmount: 3500000, depositAmount: 700000, owner: 'Mrs. B', description: 'Cozy apartment.', status: PropertyStatus.Vacant, agentId: 'agent1', images: [], documents: [], notes: '' },
   { id: 'prop3', name: 'Corporate Tower', unitNumber: 'Floor 10', location: 'Ikoyi', departmentId: 'dept_off', rentAmount: 15000000, depositAmount: 3000000, owner: 'Big Corp', description: 'Grade A office space.', status: PropertyStatus.Occupied, agentId: 'agent2', images: [], documents: [], notes: '' },
 ];
-
-const getFutureDate = (days: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-}
 
 const initialTenants: Tenant[] = [
     { id: 'ten1', fullName: 'Alice Williams', phone: '111-222-3333', email: 'alice@mail.com', address: '123 Main St', nin: '12345678901', guarantor: { fullName: 'Bob Brown', phone: '444-555-6666', address: '456 Oak Ave', nin: '09876543210' }, propertyId: 'prop1', leaseStartDate: '2023-01-01', leaseEndDate: getFutureDate(30), rentDueDate: getFutureDate(5), profilePhoto: `https://i.pravatar.cc/150?u=alice`, notes: 'Tenant requested an additional parking spot.', username: 'tenant@estateflow.com', password: 'tenant123' },
@@ -288,7 +271,6 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (use
     );
 };
 
-// Main App Component
 const App = () => {
     const loadState = () => {
         try {
@@ -296,18 +278,29 @@ const App = () => {
             if (serializedState === null) {
                 return initialData;
             }
-            // Deep merge to ensure new properties (like landingPageConfig) are added if missing in old storage
             const loadedState = JSON.parse(serializedState);
             
-            // Ensure Platform Owner role exists if loading old data
+            // Ensure permissions and structure are up to date with schema
             if (!loadedState.roles.find((r: Role) => r.id === 'role_platform_owner')) {
                 loadedState.roles.unshift(initialRoles[0]);
             }
-            // Ensure Platform Owner user has correct role
             const ownerUser = loadedState.users.find((u: User) => u.id === 'owner');
             if (ownerUser && ownerUser.roleId === 'role_super_admin') {
                 ownerUser.roleId = 'role_platform_owner';
             }
+            
+            // Fix for any users missing subscription info if loading old data
+            loadedState.users = loadedState.users.map((u: User) => {
+                if(u.roleId === 'role_super_admin' && !u.subscriptionPlan) {
+                    return {
+                        ...u,
+                        subscriptionPlan: 'Professional',
+                        subscriptionStatus: 'Active',
+                        subscriptionExpiry: getFutureDate(30)
+                    };
+                }
+                return u;
+            });
 
             return { ...initialData, ...loadedState };
         } catch (error) {
@@ -316,7 +309,6 @@ const App = () => {
         }
     };
 
-    // State
     const [departments, setDepartments] = useState<Department[]>(() => loadState().departments);
     const [roles, setRoles] = useState<Role[]>(() => loadState().roles);
     const [users, setUsers] = useState<User[]>(() => loadState().users);
@@ -338,7 +330,6 @@ const App = () => {
     const [leaseEndReminderDays, setLeaseEndReminderDays] = useState(() => loadState().leaseEndReminderDays);
     const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => loadState().landingPageConfig);
     
-    // Auth & UI State
     const [currentUser, setCurrentUser] = useState<User | Tenant | null>(null);
     const [activePage, setActivePage] = useState('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -346,7 +337,6 @@ const App = () => {
     const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-    // Save state to local storage whenever it changes
     useEffect(() => {
         const stateToSave = {
             departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig
@@ -389,7 +379,6 @@ const App = () => {
         }
         const role = roles.find(r => r.id === staffUser.roleId);
         
-        // Platform Owner sees everything for management purposes but uses a dedicated dashboard
         if (role?.name === 'Platform Owner' || role?.name === 'Super Admin' || role?.name === 'Accountant') {
             return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
         }
@@ -448,7 +437,6 @@ const App = () => {
                 return userRole?.permissions.includes(permission) ?? false;
             };
 
-            // If user is Platform Owner, redirect to platform dashboard
             if (hasPermission(Permission.VIEW_PLATFORM_DASHBOARD)) {
                 setActivePage('platform-dashboard');
                 window.location.hash = '#platform-dashboard';
@@ -501,20 +489,28 @@ const App = () => {
             type: NotificationType.Global,
             read: false,
         };
-        console.log('BROADCAST:', { target, type, message, subject });
         setNotifications(prev => [newNotif, ...prev]);
         addAuditLog('SENT_BROADCAST', `Sent ${type} broadcast to ${target}. Subject: ${subject || 'N/A'}`);
     };
 
-    const toggleUserStatus = (userId: string) => {
+    const handleUpdateUser = (userId: string, updates: Partial<User>) => {
         setUsers(prev => prev.map(u => 
-            u.id === userId ? { ...u, status: u.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active } : u
+            u.id === userId ? { ...u, ...updates } : u
         ));
         const targetUser = users.find(u => u.id === userId);
         if (targetUser) {
-            addAuditLog('TOGGLED_USER_STATUS', `Changed status of ${targetUser.username} to ${targetUser.status === UserStatus.Active ? 'Suspended' : 'Active'}`, userId);
+            const changedFields = Object.keys(updates).join(', ');
+            addAuditLog('UPDATED_USER', `Updated user ${targetUser.username}. Fields: ${changedFields}`, userId);
         }
-    };
+    }
+
+    const handleDeleteUser = (userId: string) => {
+        const targetUser = users.find(u => u.id === userId);
+        if(targetUser) {
+            addAuditLog('DELETED_USER', `Deleted user ${targetUser.username} (Platform Action)`, userId);
+        }
+        setUsers(prev => prev.filter(u => u.id !== userId));
+    }
 
     const markNotificationAsRead = (id: string) => {
         setReadNotificationIds(prev => new Set(prev).add(id));
@@ -525,14 +521,17 @@ const App = () => {
         setReadNotificationIds(new Set(allIds));
     };
 
+    const handleLandingPageConfigSave = (newConfig: LandingPageConfig) => {
+        setLandingPageConfig(newConfig);
+        addAuditLog('UPDATED_LANDING_PAGE', 'Platform Owner updated landing page configuration.');
+    };
+
     useEffect(() => {
         const handleHashChange = () => {
-            // Remove # from hash to set active page correctly
             const hash = window.location.hash.replace('#', '');
             if (hash) {
                 setActivePage(hash);
             } else if (currentUser && 'roleId' in currentUser) {
-                // Check permissions to set default page safely
                 if (userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD)) {
                     setActivePage('platform-dashboard');
                 } else {
@@ -541,65 +540,76 @@ const App = () => {
             }
         };
         window.addEventListener('hashchange', handleHashChange);
-        // Handle initial load if hash exists
         if (window.location.hash) handleHashChange(); 
         
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [currentUser, userHasPermission]);
 
-    // Effect for automated notifications
+    // Cron Job Simulation: Checks every minute for Subscription Expiry & Rent Due
     useEffect(() => {
-        if (currentUser && 'roleId' in currentUser) { // Only run for staff
-            const interval = setInterval(() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+        if (!isStaff) return;
 
-                tenants.forEach(tenant => {
-                    const dueDate = new Date(tenant.rentDueDate);
-                    const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const interval = setInterval(() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-                    if (daysUntilDue > 0 && daysUntilDue <= 14) {
-                        const existingNotifId = `rent-due-${tenant.id}-${daysUntilDue}`;
-                        if (!notifications.some(n => n.id === existingNotifId) && !readNotificationIds.has(existingNotifId)) {
+            // 1. Subscription Expiry Check (For Platform Owner / Automated System)
+            // We iterate through users to check subscription status
+            setUsers(prevUsers => prevUsers.map(u => {
+                if (u.subscriptionStatus === 'Active' && u.subscriptionExpiry) {
+                    const expiryDate = new Date(u.subscriptionExpiry);
+                    if (today > expiryDate) {
+                        // Subscription expired
+                        return { ...u, subscriptionStatus: 'Expired' };
+                    }
+                }
+                return u;
+            }));
+
+            // 2. Rent Reminders
+            tenants.forEach(tenant => {
+                const dueDate = new Date(tenant.rentDueDate);
+                const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (daysUntilDue > 0 && daysUntilDue <= 14) {
+                    const existingNotifId = `rent-due-${tenant.id}-${daysUntilDue}`;
+                    if (!notifications.some(n => n.id === existingNotifId) && !readNotificationIds.has(existingNotifId)) {
+                        const newNotif: Notification = {
+                            id: existingNotifId, message: `Rent for ${tenant.fullName} is due in ${daysUntilDue} days.`,
+                            date: new Date().toISOString(), type: NotificationType.RentReminder, read: false
+                        };
+                        setNotifications(prev => [newNotif, ...prev]);
+                    }
+                }
+            });
+
+            // 3. Lease Expiry Reminders
+            const reminderDays = leaseEndReminderDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
+            tenants.forEach(tenant => {
+                const leaseEndDate = new Date(tenant.leaseEndDate);
+                leaseEndDate.setHours(0, 0, 0, 0); 
+                const timeDiff = leaseEndDate.getTime() - today.getTime();
+                const daysUntilExpiry = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+
+                if (daysUntilExpiry >= 0 && reminderDays.includes(daysUntilExpiry)) {
+                    const property = properties.find(p => p.id === tenant.propertyId);
+                    const propertyName = property ? property.name : 'Unknown Property';
+                    const existingNotifId = `lease-expiry-${tenant.id}-${daysUntilExpiry}`;
+
+                    if (!notifications.some(n => n.id === existingNotifId)) {
                             const newNotif: Notification = {
-                                id: existingNotifId, message: `Rent for ${tenant.fullName} is due in ${daysUntilDue} days.`,
-                                date: new Date().toISOString(), type: NotificationType.RentReminder, read: false
-                            };
-                            setNotifications(prev => [newNotif, ...prev]);
-                            new Audio(NOTIFICATION_SOUND_BASE64).play().catch(e => console.error("Audio play failed:", e));
-                        }
+                            id: existingNotifId, message: `Lease for ${tenant.fullName} at ${propertyName} expires in ${daysUntilExpiry} days.`,
+                            date: new Date().toISOString(), type: NotificationType.LeaseExpiry, read: false,
+                        };
+                        setNotifications(prev => [newNotif, ...prev]);
                     }
-                });
+                }
+            });
 
-                const reminderDays = leaseEndReminderDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
+        }, 60000); // Run every minute
 
-                tenants.forEach(tenant => {
-                    const leaseEndDate = new Date(tenant.leaseEndDate);
-                    leaseEndDate.setHours(0, 0, 0, 0); 
-                    const timeDiff = leaseEndDate.getTime() - today.getTime();
-                    const daysUntilExpiry = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-
-                    if (daysUntilExpiry >= 0 && reminderDays.includes(daysUntilExpiry)) {
-                        const property = properties.find(p => p.id === tenant.propertyId);
-                        const propertyName = property ? property.name : 'Unknown Property';
-                        const existingNotifId = `lease-expiry-${tenant.id}-${daysUntilExpiry}`;
-
-                        if (!notifications.some(n => n.id === existingNotifId)) {
-                             const newNotif: Notification = {
-                                id: existingNotifId, message: `Lease for ${tenant.fullName} at ${propertyName} expires in ${daysUntilExpiry} days.`,
-                                date: new Date().toISOString(), type: NotificationType.LeaseExpiry, read: false,
-                            };
-                            setNotifications(prev => [newNotif, ...prev]);
-                            new Audio(NOTIFICATION_SOUND_BASE64).play().catch(e => console.error("Audio play failed:", e));
-                        }
-                    }
-                });
-
-            }, 60000); // Check every minute
-
-            return () => clearInterval(interval);
-        }
-    }, [tenants, notifications, readNotificationIds, currentUser, leaseEndReminderDays, properties]);
+        return () => clearInterval(interval);
+    }, [tenants, notifications, readNotificationIds, leaseEndReminderDays, properties, isStaff]);
     
     if (!currentUser) {
         return (
@@ -641,7 +651,7 @@ const App = () => {
         }
 
         switch(pageToRender) {
-          case 'platform-dashboard': return <PlatformDashboard users={users} roles={roles} toggleUserStatus={toggleUserStatus} />;
+          case 'platform-dashboard': return <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />;
           case 'dashboard': return <Dashboard {...visibleData} currentUser={staffUser!} />;
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
           case 'tenants': return <Tenants {...visibleData} templates={templates} setTenants={setTenants} setPayments={setPayments} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} onPrintReceipt={onPrintReceipt} onSendSms={onSendSms} addAuditLog={addAuditLog} />;
@@ -650,12 +660,12 @@ const App = () => {
           case 'reports': return <Reports {...visibleData} currentUser={staffUser!} />;
           case 'agents': return <Agents {...visibleData} setAgents={setAgents} currentUser={staffUser!} userHasPermission={userHasPermission} commissionPayments={commissionPayments} setCommissionPayments={setCommissionPayments} addAuditLog={addAuditLog} />;
           case 'users': return <Users {...visibleData} setUsers={setUsers} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
-          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={setLandingPageConfig} />;
+          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={handleLandingPageConfigSave} />;
           case 'emaillog': return <EmailLog emailLog={emailLog} />;
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;
           case 'auditlog': return <AuditLog auditLog={auditLog} />;
-          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} toggleUserStatus={toggleUserStatus} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
+          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
         }
     };
 

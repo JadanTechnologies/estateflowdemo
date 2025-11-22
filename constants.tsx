@@ -45,6 +45,7 @@ export const NAV_LINKS = [
 
 export const ALL_PERMISSIONS: { id: Permission, label: string, isAgentSpecific?: boolean }[] = [
     { id: Permission.VIEW_PLATFORM_DASHBOARD, label: 'View Platform Dashboard (Owner Only)' },
+    { id: Permission.MANAGE_SUBSCRIPTIONS, label: 'Manage Subscriptions (Owner Only)' },
     { id: Permission.VIEW_DASHBOARD, label: 'View Dashboard' },
     { id: Permission.VIEW_PROPERTIES, label: 'View Properties' },
     { id: Permission.MANAGE_PROPERTIES, label: 'Manage Properties (Add, Edit, Delete)' },

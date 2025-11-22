@@ -14,6 +14,7 @@ export enum PaymentType {
   Rent = 'Rent',
   Deposit = 'Deposit',
   Other = 'Other',
+  Subscription = 'Subscription', // New type for Platform Owner
 }
 
 export enum PaymentStatus {
@@ -36,6 +37,7 @@ export enum PaymentMethod {
 export enum Permission {
   // Platform Owner
   VIEW_PLATFORM_DASHBOARD = 'view_platform_dashboard',
+  MANAGE_SUBSCRIPTIONS = 'manage_subscriptions', // New permission
 
   // Dashboard
   VIEW_DASHBOARD = 'view_dashboard',
@@ -200,6 +202,11 @@ export interface User {
   roleId: string;
   status: UserStatus;
   departmentId?: string; // Optional: Only for Property Managers
+  
+  // Platform Subscription Fields (For Tenant Admins)
+  subscriptionPlan?: string;
+  subscriptionStatus?: 'Active' | 'Expired' | 'Trial';
+  subscriptionExpiry?: string;
 }
 
 export enum NotificationType {
@@ -228,6 +235,7 @@ export interface Announcement {
     title: string;
     content: string;
     date: string;
+    status?: string; // e.g., 'Published'
 }
 
 export interface EmailLogEntry {
