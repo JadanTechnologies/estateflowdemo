@@ -312,8 +312,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
                   </ul>
               </div>
           </div>
-          <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm border-t border-white/5 pt-8">
-              © {new Date().getFullYear()} EstateFlow Inc. All rights reserved.
+          <div className="max-w-7xl mx-auto px-6 border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
+              <p>© {new Date().getFullYear()} EstateFlow Inc. All rights reserved.</p>
+              <p className="mt-2 md:mt-0">Developed by <span className="text-indigo-500 font-semibold">Jadan Technologies</span></p>
           </div>
       </footer>
 
