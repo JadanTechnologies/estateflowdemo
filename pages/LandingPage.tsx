@@ -55,6 +55,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
       if(businessName && email && password && selectedPlanId && address && phone) {
           onSignup(businessName, email, password, selectedPlanId, logoFile, address, phone, country, currency);
           setIsSignupModalOpen(false);
+          // Reset form
+          setBusinessName('');
+          setEmail('');
+          setPassword('');
+          setAddress('');
+          setPhone('');
+          setLogoFile('');
       }
   };
 
@@ -359,7 +366,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
 
       {/* Signup Modal */}
       <Modal isOpen={isSignupModalOpen} onClose={() => setIsSignupModalOpen(false)} title="Start Your Free Trial">
-          <form onSubmit={handleSignupSubmit} className="space-y-4 text-gray-300">
+          <form onSubmit={handleSignupSubmit} className="space-y-4 text-gray-300 overflow-y-auto max-h-[80vh] px-1">
               <div className="grid grid-cols-2 gap-4">
                   <div>
                       <label className="block text-sm font-medium mb-1">Business Name</label>
