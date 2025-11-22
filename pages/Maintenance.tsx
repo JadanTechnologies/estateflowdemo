@@ -4,6 +4,8 @@
 
 
 
+
+
 import React, { useState } from 'react';
 import { Maintenance, Property, User, Permission, AuditLogEntry, Tenant } from '../types';
 import Modal from '../components/Modal';
@@ -200,8 +202,8 @@ const MaintenancePage: React.FC<{
 
         // Sort by date for chronological order then format for display
         return Object.values(costsByMonth)
-            .sort((a, b) => a.date.getTime() - b.date.getTime())
-            .map(entry => ({
+            .sort((a: { cost: number; date: Date }, b: { cost: number; date: Date }) => a.date.getTime() - b.date.getTime())
+            .map((entry: { cost: number; date: Date }) => ({
                 name: entry.date.toLocaleString('default', { month: 'short', year: 'numeric' }),
                 cost: entry.cost
             }));

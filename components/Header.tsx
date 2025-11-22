@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { User, Notification, Role } from '../types';
 import NotificationBell from './NotificationBell';
@@ -21,9 +20,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ 
   currentUser, 
-  users,
   roles,
-  setCurrentUser,
   activePage, 
   isSidebarOpen, 
   toggleSidebar,
@@ -53,17 +50,12 @@ const Header: React.FC<HeaderProps> = ({
             markNotificationAsRead={markNotificationAsRead}
             markAllAsRead={markAllAsRead}
         />
-        <div className="relative">
-          <select 
-            value={currentUser.id} 
-            onChange={(e) => setCurrentUser(users.find(u => u.id === e.target.value)!)}
-            className="bg-card border border-border rounded-md p-2 appearance-none cursor-pointer"
-          >
-            {users.map(user => (
-              <option key={user.id} value={user.id}>{user.name} ({user.username}) - {getRoleName(user.roleId)}</option>
-            ))}
-          </select>
+        
+        <div className="text-right hidden md:block">
+            <p className="font-semibold text-sm text-text-primary">{currentUser.name}</p>
+            <p className="text-xs text-text-secondary">{getRoleName(currentUser.roleId)}</p>
         </div>
+
         <img
           className="w-10 h-10 rounded-full border-2 border-primary"
           src={`https://i.pravatar.cc/150?u=${currentUser.name}`}
