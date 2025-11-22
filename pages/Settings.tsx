@@ -326,10 +326,10 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
             
             <div className="flex border-b border-border mb-6">
                 <button onClick={() => setActiveTab('general')} className={`px-4 py-2 font-medium ${activeTab === 'general' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>General</button>
-                {canManageSettings && <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>}
+                {canManageSettings && isPlatformOwner && <button onClick={() => setActiveTab('landing')} className={`px-4 py-2 font-medium ${activeTab === 'landing' ? 'border-b-2 border-primary text-primary' : 'text-text-secondary hover:text-text-primary'}`}>Landing Page</button>}
             </div>
 
-            {activeTab === 'landing' && canManageSettings ? (
+            {activeTab === 'landing' && canManageSettings && isPlatformOwner ? (
                 <LandingPageEditor config={landingPageConfig} onSave={handleLandingPageSave} />
             ) : (
                 <div className="space-y-8 max-w-4xl">
@@ -469,13 +469,13 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         </div>
                     )}
 
-                    {canManageCommunications && (
+                    {canManageCommunications && !isPlatformOwner && (
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <h3 className="text-lg font-bold mb-4">Communications</h3>
                             <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
                         </div>
                     )}
-                    {canManageCommunications && (
+                    {canManageCommunications && !isPlatformOwner && (
                         <div className="bg-card p-6 rounded-lg shadow-lg">
                             <h3 className="text-lg font-bold mb-4">Notification Templates</h3>
                             <TemplateManager templates={templates} setTemplates={setTemplates} />
