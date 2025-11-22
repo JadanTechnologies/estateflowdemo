@@ -5,9 +5,7 @@ import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
   currentUser: User;
-  users: User[];
   roles: Role[];
-  setCurrentUser: (user: User) => void;
   activePage: string;
   isSidebarOpen: boolean;
   toggleSidebar: () => void;

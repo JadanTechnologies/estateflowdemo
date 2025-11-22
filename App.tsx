@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -585,9 +584,7 @@ const App = () => {
                 <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isStaff ? (isSidebarOpen ? 'ml-64' : 'ml-20') : ''}`}>
                     {isStaff && <Header 
                       currentUser={currentUser as User}
-                      users={users}
                       roles={roles}
-                      setCurrentUser={(user) => setCurrentUser(user)}
                       activePage={activePage}
                       isSidebarOpen={isSidebarOpen}
                       toggleSidebar={toggleSidebar}
