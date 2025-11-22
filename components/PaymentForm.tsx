@@ -35,11 +35,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
         const propertyForTenant = selectedTenant ? properties.find(p => p.id === selectedTenant.propertyId) : null;
 
         if (!propertyForTenant || !formData.tenantId) {
-            return { balance: 0, balanceLabel: 'Balance' };
+            return { balance: 0, balanceLabel: 'Current Balance' };
         }
 
-        // Only count Paid or Deposit status as reducing the debt.
+        // Only count Paid status as reducing the debt.
         // Unpaid or Pending payments do not reduce the balance due.
+        // Note: If PaymentStatus.Deposit exists in your enum, we treat it as paid/held funds.
         const isPaid = (p: Payment) => p.paymentStatus === PaymentStatus.Paid || p.paymentStatus === PaymentStatus.Deposit;
 
         if (formData.paymentType === PaymentType.Deposit) {
@@ -47,7 +48,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
             const totalDepositPaid = payments
                 .filter(p => p.tenantId === formData.tenantId && 
                              p.paymentType === PaymentType.Deposit && 
-                             p.id !== payment?.id &&
+                             p.id !== payment?.id && // Exclude current payment if editing
                              isPaid(p))
                 .reduce((sum, p) => sum + p.amountPaid, 0);
             
@@ -60,7 +61,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
         const totalRentPaid = payments
             .filter(p => p.tenantId === formData.tenantId && 
                          p.paymentType === PaymentType.Rent && 
-                         p.id !== payment?.id &&
+                         p.id !== payment?.id && // Exclude current payment if editing
                          isPaid(p))
             .reduce((sum, p) => sum + p.amountPaid, 0);
 
@@ -131,7 +132,21 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
     };
 
     const projectedBalance = balance - (formData.amountPaid || 0);
-    const projectedBalanceColor = projectedBalance > 0 ? 'text-red-400' : (projectedBalance < 0 ? 'text-green-400' : 'text-text-primary');
+    
+    // Helper to determine text color based on balance sign
+    const getBalanceColor = (val: number) => {
+        if (val > 0) return 'text-red-400'; // Debt
+        if (val < 0) return 'text-green-400'; // Credit
+        return 'text-gray-400'; // Settled
+    };
+
+    const formatBalance = (val: number) => {
+        const absVal = Math.abs(val);
+        const formatted = `₦${absVal.toLocaleString()}`;
+        if (val > 0) return `${formatted} (Debt)`;
+        if (val < 0) return `${formatted} (Credit)`;
+        return `${formatted} (Settled)`;
+    };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -174,16 +189,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
                         {Object.values(PaymentStatus).map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
                  )}
+                 
                  <div className="p-2 bg-secondary rounded border border-border text-sm text-text-secondary md:col-span-2">
                     Date & Time: {payment?.date ? new Date(payment.date).toLocaleString() : 'Will be recorded on save'}
                 </div>
-                 <div className="p-2 bg-secondary rounded border border-border">
-                    <span className="text-text-secondary text-sm block">{balanceLabel}</span>
-                    <span className="font-bold">₦{(balance).toLocaleString()}</span>
+
+                 {/* Balance Info Section */}
+                 <div className="p-3 bg-secondary rounded border border-border md:col-span-1">
+                    <span className="text-text-secondary text-xs block uppercase tracking-wider">{balanceLabel}</span>
+                    <span className={`font-bold text-lg ${getBalanceColor(balance)}`}>{formatBalance(balance)}</span>
                  </div>
-                 <div className="p-2 bg-secondary rounded border border-border">
-                    <span className="text-text-secondary text-sm block">Balance After this Pmt</span>
-                    <span className={`font-bold ${projectedBalanceColor}`}>₦{projectedBalance.toLocaleString()}</span>
+                 <div className="p-3 bg-secondary rounded border border-border md:col-span-1">
+                    <span className="text-text-secondary text-xs block uppercase tracking-wider">Balance After this Pmt</span>
+                    <span className={`font-bold text-lg ${getBalanceColor(projectedBalance)}`}>{formatBalance(projectedBalance)}</span>
                  </div>
             </div>
             
@@ -191,10 +209,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
                 <div className="md:col-span-2 space-y-4 p-4 border border-dashed border-border rounded-lg">
                     <h4 className="font-semibold text-text-primary">Manual Payment Instructions</h4>
                     <p className="text-sm text-text-secondary">Please transfer the payment to the following bank account and upload a screenshot or proof of payment below.</p>
-                    <div className="p-3 bg-background rounded-md text-sm">
-                        <p><strong>Bank:</strong> {manualPaymentDetails.bankName}</p>
-                        <p><strong>Account Name:</strong> {manualPaymentDetails.accountName}</p>
-                        <p><strong>Account Number:</strong> {manualPaymentDetails.accountNumber}</p>
+                    <div className="p-3 bg-background rounded-md text-sm border border-border">
+                        <p className="flex justify-between border-b border-border/50 pb-1 mb-1">
+                            <span className="text-text-secondary">Bank:</span> 
+                            <span className="font-medium">{manualPaymentDetails.bankName}</span>
+                        </p>
+                        <p className="flex justify-between border-b border-border/50 pb-1 mb-1">
+                            <span className="text-text-secondary">Account Name:</span> 
+                            <span className="font-medium">{manualPaymentDetails.accountName}</span>
+                        </p>
+                        <p className="flex justify-between">
+                            <span className="text-text-secondary">Account Number:</span> 
+                            <span className="font-medium tracking-wider">{manualPaymentDetails.accountNumber}</span>
+                        </p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Upload Proof of Payment</label>
@@ -206,7 +233,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
                             required
                         />
                         {errors.proof && <p className="text-red-400 text-xs mt-1">{errors.proof}</p>}
-                        {proofFile && <img src={proofFile} alt="Proof preview" className="mt-2 max-h-32 rounded" />}
+                        {proofFile && <img src={proofFile} alt="Proof preview" className="mt-2 max-h-32 rounded border border-border" />}
                     </div>
                 </div>
             )}
@@ -215,7 +242,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
                 <textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Payment Notes (e.g., partial payment details)" className="w-full bg-secondary p-2 rounded border border-border h-24"></textarea>
              )}
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-4">
                 <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
                 <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">{isTenantFlow ? 'Submit for Approval' : 'Save Payment'}</button>
             </div>
@@ -224,4 +251,3 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
 };
 
 export default PaymentForm;
-    
