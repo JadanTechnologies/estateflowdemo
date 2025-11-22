@@ -12,20 +12,27 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | 'refund' | null>(null);
 
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#030712] text-white overflow-hidden font-sans selection:bg-indigo-500 selection:text-white scroll-smooth">
+    <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden font-sans selection:bg-indigo-500 selection:text-white">
       {/* Navbar */}
       <nav className="fixed w-full z-50 bg-[#030712]/80 backdrop-blur-md border-b border-white/10">
           <div className="flex justify-between items-center p-6 max-w-7xl mx-auto">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <Logo className="h-10 w-10 text-indigo-500" />
               <span className="text-2xl font-bold tracking-tight">EstateFlow</span>
             </div>
             <div className="hidden md:flex space-x-8 text-sm font-medium text-gray-400">
-              <a href="#about" className="hover:text-indigo-400 transition-colors">About</a>
-              <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-indigo-400 transition-colors">Pricing</a>
-              <a href="#contact" className="hover:text-indigo-400 transition-colors">Contact</a>
+              <button onClick={() => scrollToSection('about')} className="hover:text-indigo-400 transition-colors">About</button>
+              <button onClick={() => scrollToSection('features')} className="hover:text-indigo-400 transition-colors">Features</button>
+              <button onClick={() => scrollToSection('pricing')} className="hover:text-indigo-400 transition-colors">Pricing</button>
+              <button onClick={() => scrollToSection('contact')} className="hover:text-indigo-400 transition-colors">Contact</button>
             </div>
             <button 
               onClick={onLoginClick}
@@ -62,12 +69,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
             >
               {config.hero.ctaText}
             </button>
-            <a href="#howitworks" className="px-8 py-4 rounded-xl font-bold text-lg text-white border border-gray-700 hover:bg-white/5 transition-colors flex items-center justify-center group">
+            <button 
+                onClick={() => scrollToSection('howitworks')} 
+                className="px-8 py-4 rounded-xl font-bold text-lg text-white border border-gray-700 hover:bg-white/5 transition-colors flex items-center justify-center group"
+            >
               How it Works
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -98,7 +108,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-20 bg-[#0b0f19]">
+      <section id="about" className="py-20 bg-[#0b0f19] scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div className="space-y-6">
@@ -124,7 +134,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
        {/* How It Works Section */}
-       <section id="howitworks" className="py-20 bg-[#030712]">
+       <section id="howitworks" className="py-20 bg-[#030712] scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-white">{config.howItWorks.title}</h2>
@@ -144,7 +154,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-[#0b0f19]">
+      <section id="features" className="py-20 bg-[#0b0f19] scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{config.features.title}</h2>
@@ -167,7 +177,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-[#030712]">
+      <section id="pricing" className="py-20 bg-[#030712] scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{config.pricing.title}</h2>
@@ -202,7 +212,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-[#0b0f19]">
+      <section className="py-20 bg-[#0b0f19] scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6">
             <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-16">{config.testimonials.title}</h2>
             <div className="grid md:grid-cols-2 gap-8">
@@ -224,7 +234,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
       
       {/* Blog Section */}
-      <section className="py-20 bg-[#030712]">
+      <section className="py-20 bg-[#030712] scroll-mt-24">
           <div className="max-w-7xl mx-auto px-6">
               <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-16">{config.blog.title}</h2>
               <div className="grid md:grid-cols-2 gap-8">
@@ -245,7 +255,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-[#0b0f19]">
+      <section className="py-20 bg-[#0b0f19] scroll-mt-24">
         <div className="max-w-3xl mx-auto px-6">
             <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">{config.faqs.title}</h2>
             <div className="space-y-4">
@@ -267,7 +277,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-[#02040a] pt-20 pb-10 border-t border-white/5">
+      <footer id="contact" className="bg-[#02040a] pt-20 pb-10 border-t border-white/5 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-12">
               <div className="col-span-1 md:col-span-2">
                   <div className="flex items-center space-x-2 mb-6">
@@ -287,10 +297,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
               <div>
                   <h4 className="font-bold text-white mb-6">Company</h4>
                   <ul className="space-y-3 text-gray-400 text-sm">
-                      <li><a href="#about" className="hover:text-indigo-400">About Us</a></li>
-                      <li><button onClick={() => setActiveLegalModal('privacy')} className="hover:text-indigo-400">Privacy Policy</button></li>
-                      <li><button onClick={() => setActiveLegalModal('terms')} className="hover:text-indigo-400">Terms of Service</button></li>
-                      <li><button onClick={() => setActiveLegalModal('refund')} className="hover:text-indigo-400">Refund Policy</button></li>
+                      <li><button onClick={() => scrollToSection('about')} className="hover:text-indigo-400 text-left">About Us</button></li>
+                      <li><button onClick={() => setActiveLegalModal('privacy')} className="hover:text-indigo-400 text-left">Privacy Policy</button></li>
+                      <li><button onClick={() => setActiveLegalModal('terms')} className="hover:text-indigo-400 text-left">Terms of Service</button></li>
+                      <li><button onClick={() => setActiveLegalModal('refund')} className="hover:text-indigo-400 text-left">Refund Policy</button></li>
                   </ul>
               </div>
               <div>
@@ -309,13 +319,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
 
       {/* Legal Modals */}
       <Modal isOpen={!!activeLegalModal} onClose={() => setActiveLegalModal(null)} title={activeLegalModal === 'privacy' ? 'Privacy Policy' : activeLegalModal === 'terms' ? 'Terms of Service' : 'Refund Policy'}>
-          <div className="p-4 whitespace-pre-wrap text-gray-300 text-sm leading-relaxed">
+          <div className="p-4 whitespace-pre-wrap text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
              {activeLegalModal === 'privacy' && config.legal.privacyPolicy}
              {activeLegalModal === 'terms' && config.legal.termsOfService}
              {activeLegalModal === 'refund' && config.legal.refundPolicy}
           </div>
-          <div className="flex justify-end p-4">
-              <button onClick={() => setActiveLegalModal(null)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">Close</button>
+          <div className="flex justify-end p-4 border-t border-white/10">
+              <button onClick={() => setActiveLegalModal(null)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">Close</button>
           </div>
       </Modal>
 
