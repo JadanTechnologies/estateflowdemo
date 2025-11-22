@@ -317,9 +317,25 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<string | null>(null);
 
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [agentFilter, setAgentFilter] = useState('All');
+
   const userRole = useMemo(() => roles.find(r => r.id === currentUser.roleId), [roles, currentUser.roleId]);
   const canManageGlobally = userHasPermission(Permission.MANAGE_PROPERTIES);
   const canEditOwnProperty = userRole?.name === 'Agent' && userHasPermission(Permission.AGENT_CAN_EDIT_OWN_PROPERTIES);
+
+  const filteredProperties = useMemo(() => {
+    return properties.filter(property => {
+      const matchesSearch = property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            property.location.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || property.status === statusFilter;
+      const matchesAgent = agentFilter === 'All' || property.agentId === agentFilter;
+
+      return matchesSearch && matchesStatus && matchesAgent;
+    });
+  }, [properties, searchQuery, statusFilter, agentFilter]);
 
   const handleSave = (property: Property) => {
     if (selectedProperty) {
@@ -386,6 +402,36 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             </button>
         )}
       </div>
+
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input
+          type="text"
+          placeholder="Search by name or location..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="bg-secondary p-2 rounded border border-border focus:ring-2 focus:ring-primary focus:outline-none"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-secondary p-2 rounded border border-border focus:ring-2 focus:ring-primary focus:outline-none"
+        >
+          <option value="All">All Statuses</option>
+          {Object.values(PropertyStatus).map(status => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
+        <select
+          value={agentFilter}
+          onChange={(e) => setAgentFilter(e.target.value)}
+          className="bg-secondary p-2 rounded border border-border focus:ring-2 focus:ring-primary focus:outline-none"
+        >
+          <option value="All">All Agents</option>
+          {agents.map(agent => (
+            <option key={agent.id} value={agent.id}>{agent.name}</option>
+          ))}
+        </select>
+      </div>
       
       <div className="bg-card rounded-lg shadow-lg overflow-x-auto">
         <table className="w-full text-left">
@@ -400,7 +446,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             </tr>
           </thead>
           <tbody>
-            {properties.map(prop => (
+            {filteredProperties.map(prop => (
               <tr key={prop.id} className="border-b border-border/50 hover:bg-secondary">
                 <td className="p-4">{prop.name}</td>
                 <td className="p-4">{prop.location}</td>
@@ -422,6 +468,11 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                 </td>
               </tr>
             ))}
+            {filteredProperties.length === 0 && (
+                <tr>
+                    <td colSpan={6} className="text-center p-6 text-text-secondary">No properties found matching your filters.</td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
