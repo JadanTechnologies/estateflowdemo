@@ -222,10 +222,20 @@ const initialPlatformConfig: PlatformConfig = {
     }
 };
 
+// Default Branding
+const initialBranding = {
+    platformName: 'EstateFlow',
+    companyEmail: 'contact@estateflow.com',
+    companyPhone: '08012345678, 09087654321',
+    companyAddress: '123 Property Lane, Real Estate City, Lagos',
+    currency: 'NGN',
+    logoUrl: ''
+};
+
 const LOCAL_STORAGE_KEY = 'estateFlowData';
 
 const initialData = {
-    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog, landingPageConfig: INITIAL_LANDING_PAGE_CONFIG, platformConfig: initialPlatformConfig
+    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog, landingPageConfig: INITIAL_LANDING_PAGE_CONFIG, platformConfig: initialPlatformConfig, branding: initialBranding
 };
 
 const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (user: User | Tenant) => void }> = ({ isOpen, onClose, onLogin }) => {
@@ -329,6 +339,18 @@ const App = () => {
             if(!loadedState.platformConfig) {
                 loadedState.platformConfig = initialPlatformConfig;
             }
+
+            // Backfill Branding
+            if(!loadedState.branding) {
+                loadedState.branding = initialBranding;
+            }
+
+            // Backfill API Keys (Merge to ensure new keys like resendApiKey are present)
+            if (loadedState.apiKeys) {
+                loadedState.apiKeys = { ...initialApiKeys, ...loadedState.apiKeys };
+            } else {
+                loadedState.apiKeys = initialApiKeys;
+            }
             
             return { ...initialData, ...loadedState };
         } catch (error) {
@@ -358,6 +380,7 @@ const App = () => {
     const [leaseEndReminderDays, setLeaseEndReminderDays] = useState(() => loadState().leaseEndReminderDays);
     const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => loadState().landingPageConfig);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(() => loadState().platformConfig);
+    const [branding, setBrandingState] = useState(() => loadState().branding);
     
     const [currentUser, setCurrentUser] = useState<User | Tenant | null>(null);
     const [activePage, setActivePage] = useState('dashboard');
@@ -366,24 +389,26 @@ const App = () => {
     const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-    // Branding State (Lifted from Settings)
-    const [platformName, setPlatformName] = useState('EstateFlow');
-    const [companyEmail, setCompanyEmail] = useState('contact@estateflow.com');
-    const [companyPhone, setCompanyPhone] = useState('08012345678, 09087654321');
-    const [companyAddress, setCompanyAddress] = useState('123 Property Lane, Real Estate City, Lagos');
-    const [currency, setCurrency] = useState('NGN');
-    const [logoUrl, setLogoUrl] = useState<string>('');
+    // Branding Setters Wrapper
+    const setBranding = useMemo(() => ({
+        setPlatformName: (v: string) => setBrandingState((p: any) => ({ ...p, platformName: v })),
+        setCompanyEmail: (v: string) => setBrandingState((p: any) => ({ ...p, companyEmail: v })),
+        setCompanyPhone: (v: string) => setBrandingState((p: any) => ({ ...p, companyPhone: v })),
+        setCompanyAddress: (v: string) => setBrandingState((p: any) => ({ ...p, companyAddress: v })),
+        setCurrency: (v: string) => setBrandingState((p: any) => ({ ...p, currency: v })),
+        setLogoUrl: (v: string) => setBrandingState((p: any) => ({ ...p, logoUrl: v })),
+    }), []);
 
     useEffect(() => {
         const stateToSave = {
-            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig
+            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig, branding
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (error) {
             console.error("Error saving state to local storage:", error);
         }
-    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig]);
+    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig, branding]);
 
 
     const addAuditLog = (action: string, details: string, targetId?: string) => {
@@ -493,20 +518,14 @@ const App = () => {
         if ('roleId' in user) {
             const staffUser = user as User;
             
-            // Load Business Profile into Branding State
+            // Load Business Profile into Branding State if applicable (for Tenant Admins), else use global branding
             if (staffUser.businessProfile) {
-                const bp = staffUser.businessProfile;
-                setPlatformName(bp.companyName);
-                setCompanyAddress(bp.address);
-                setCompanyPhone(bp.phone);
-                setCurrency(bp.currency);
-                if(bp.logoUrl) setLogoUrl(bp.logoUrl);
-            } else {
-                // Reset to defaults if no profile (e.g. Platform Owner)
-                setPlatformName('EstateFlow');
-                setCurrency('NGN');
-                setLogoUrl('');
-            }
+                setBranding.setPlatformName(staffUser.businessProfile.companyName);
+                setBranding.setCompanyAddress(staffUser.businessProfile.address);
+                setBranding.setCompanyPhone(staffUser.businessProfile.phone);
+                setBranding.setCurrency(staffUser.businessProfile.currency);
+                if(staffUser.businessProfile.logoUrl) setBranding.setLogoUrl(staffUser.businessProfile.logoUrl);
+            } 
 
             const hasPermission = (permission: Permission): boolean => {
                 const userRole = roles.find(r => r.id === staffUser.roleId);
@@ -569,13 +588,6 @@ const App = () => {
         };
 
         setUsers(prev => [...prev, newUser]);
-        
-        // Login and set branding immediately
-        setPlatformName(name);
-        setCompanyAddress(address);
-        setCompanyPhone(phone);
-        setCurrency(currency);
-        setLogoUrl(logo);
         
         handleLogin(newUser);
     };
@@ -804,8 +816,8 @@ const App = () => {
 
         // Props for Settings Component including branding and platform management actions
         const brandingProps = {
-            branding: { platformName, companyEmail, companyPhone, companyAddress, currency, logoUrl },
-            setBranding: { setPlatformName, setCompanyEmail, setCompanyPhone, setCompanyAddress, setCurrency, setLogoUrl }
+            branding: branding,
+            setBranding: setBranding
         };
 
         // Props specific for Platform Owner management within Settings
@@ -824,7 +836,6 @@ const App = () => {
 
         switch(pageToRender) {
           case 'platform-dashboard': 
-            // Simplified Dashboard: Just Overview & Cards
             return <PlatformDashboard 
                 users={users} 
                 roles={roles} 
@@ -850,7 +861,7 @@ const App = () => {
     return (
         <>
             <div className={`flex h-screen bg-background text-text-primary overflow-hidden`}>
-                {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} customLogo={logoUrl} customTitle={platformName} />}
+                {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} customLogo={branding.logoUrl} customTitle={branding.platformName} />}
                 
                 <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isStaff ? (isSidebarOpen ? 'ml-64' : 'ml-20') : ''} h-screen overflow-hidden`}>
                     {isStaff && <Header 

@@ -436,7 +436,6 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const superAdminRole = roles.find(r => r.name === 'Super Admin');
     const platformOwnerRole = roles.find(r => r.name === 'Platform Owner');
     const businessAdmins = users.filter(u => u.roleId === superAdminRole?.id);
-    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id && u.roleId !== superAdminRole?.id); // Fix: Only platform staff
     const platformRoles = roles.filter(r => 
         r.name !== 'Super Admin' && 
         r.name !== 'Property Manager' && 
@@ -505,6 +504,12 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
             });
             addAuditLog('EXTENDED_SUBSCRIPTION', `Extended subscription for user ${userId}`);
         }
+    };
+
+    const handleSaveGeneralSettings = () => {
+        // State is already updated via props setters, but we trigger a manual 'save' notification/effect if needed.
+        // Since App.tsx has useEffect for persistence, this is mostly for UX feedback.
+        alert("General Settings Saved successfully.");
     };
 
     return (
@@ -789,6 +794,10 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                             </div>
                         </div>
                     </div>
+                    {/* Added global save button for this tab for better UX */}
+                    <div className="flex justify-end">
+                        <button onClick={() => alert("Settings Saved.")} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save API Settings</button>
+                    </div>
                 </div>
             ) : activeTab === 'plans' && isPlatformOwner ? (
                 <div className="space-y-8 animate-fade-in">
@@ -843,6 +852,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                     </div>
                 </div>
             ) : (
+                // GENERAL SETTINGS TAB (Default)
                 <div className="space-y-8 max-w-4xl">
                     <div className="bg-card p-6 rounded-lg shadow-lg">
                         <h3 className="text-lg font-bold mb-4">Company Branding & Profile</h3>
@@ -1063,7 +1073,7 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                     )}
                     
                     <div className="flex justify-end">
-                        <button className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Settings</button>
+                        <button onClick={handleSaveGeneralSettings} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Settings</button>
                     </div>
                 </div>
             )}
