@@ -356,7 +356,7 @@ const App = () => {
     const [companyPhone, setCompanyPhone] = useState('08012345678, 09087654321');
     const [companyAddress, setCompanyAddress] = useState('123 Property Lane, Real Estate City, Lagos');
     const [currency, setCurrency] = useState('NGN');
-    const [logoUrl, setLogoUrl] = useState<string>(''); // New State for Logo
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     useEffect(() => {
         const stateToSave = {
@@ -463,9 +463,10 @@ const App = () => {
                 setCurrency(bp.currency);
                 if(bp.logoUrl) setLogoUrl(bp.logoUrl);
             } else {
-                // Reset to defaults if no profile
+                // Reset to defaults if no profile (e.g. Platform Owner)
                 setPlatformName('EstateFlow');
                 setCurrency('NGN');
+                setLogoUrl('');
             }
 
             const hasPermission = (permission: Permission): boolean => {
@@ -748,11 +749,12 @@ const App = () => {
         // Props for Settings Component including branding
         const brandingProps = {
             branding: { platformName, companyEmail, companyPhone, companyAddress, currency, logoUrl },
-            setBranding: { setPlatformName, setCompanyEmail, setCompanyPhone, setCompanyAddress, setCurrency }
+            setBranding: { setPlatformName, setCompanyEmail, setCompanyPhone, setCompanyAddress, setCurrency, setLogoUrl }
         };
 
         switch(pageToRender) {
           case 'platform-dashboard': 
+            // Platform dashboard manages everything internally via tabs, but we pass props for actions
             return <PlatformDashboard 
                 users={users} 
                 roles={roles} 
@@ -786,10 +788,10 @@ const App = () => {
 
     return (
         <>
-            <div className={`flex h-screen bg-background text-text-primary`}>
+            <div className={`flex h-screen bg-background text-text-primary overflow-hidden`}>
                 {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} customLogo={logoUrl} customTitle={platformName} />}
                 
-                <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isStaff ? (isSidebarOpen ? 'ml-64' : 'ml-20') : ''}`}>
+                <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isStaff ? (isSidebarOpen ? 'ml-64' : 'ml-20') : ''} h-screen overflow-hidden`}>
                     {isStaff && <Header 
                       currentUser={currentUser as User}
                       roles={roles}
@@ -803,12 +805,14 @@ const App = () => {
                       onLogout={handleLogout}
                     />
                     }
-                    <main className="flex-1 overflow-y-auto">
+                    <main className="flex-1 overflow-y-auto bg-background">
                         {renderPage()}
                     </main>
-                    <footer className="text-center p-4 text-xs text-text-secondary">
-                        Powered by <span className="text-primary font-semibold">Jadan Technologies</span>
-                    </footer>
+                    {isStaff && (
+                        <footer className="text-center p-4 text-xs text-text-secondary border-t border-border">
+                            Powered by <span className="text-primary font-semibold">Jadan Technologies</span>
+                        </footer>
+                    )}
                 </div>
                 
                 {paymentForReceipt && 

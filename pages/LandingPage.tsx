@@ -397,6 +397,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
                           <option value="Ghana">Ghana</option>
                           <option value="Kenya">Kenya</option>
                           <option value="South Africa">South Africa</option>
+                          <option value="India">India</option>
+                          <option value="Canada">Canada</option>
                       </select>
                   </div>
                   <div>

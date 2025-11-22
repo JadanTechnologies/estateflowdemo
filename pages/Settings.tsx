@@ -199,6 +199,7 @@ interface SettingsProps {
         setCompanyPhone: (v: string) => void;
         setCompanyAddress: (v: string) => void;
         setCurrency: (v: string) => void;
+        setLogoUrl: (v: string) => void;
     };
 }
 
@@ -224,6 +225,17 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
     const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setApiKeys(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setBranding.setLogoUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSaveRole = (role: Role) => {
@@ -321,30 +333,50 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                 <LandingPageEditor config={landingPageConfig} onSave={handleLandingPageSave} />
             ) : (
                 <div className="space-y-8 max-w-4xl">
-                    {canManageSettings && (
-                        <div className="bg-card p-6 rounded-lg shadow-lg">
-                            <h3 className="text-lg font-bold text-red-400 mb-4">System Actions</h3>
-                            <p className="text-sm text-text-secondary mb-4">Be careful with these actions. Resetting data is irreversible and will restore the application to its initial demo state.</p>
-                            <button
-                                onClick={() => setIsResetConfirmOpen(true)}
-                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                            >
-                                Reset Application Data
-                            </button>
+                    <div className="bg-card p-6 rounded-lg shadow-lg">
+                        <h3 className="text-lg font-bold mb-4">Company Branding & Profile</h3>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Company Name</label>
+                                    <input type="text" value={branding.platformName} onChange={e => setBranding.setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Currency</label>
+                                    <select value={branding.currency} onChange={e => setBranding.setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
+                                        <option value="NGN">NGN (₦)</option>
+                                        <option value="USD">USD ($)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="GHS">GHS (₵)</option>
+                                        <option value="KES">KES (KSh)</option>
+                                        <option value="ZAR">ZAR (R)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Logo</label>
+                                <div className="flex items-center gap-4">
+                                    {branding.logoUrl && (
+                                        <img src={branding.logoUrl} alt="Company Logo" className="h-16 w-auto border border-border rounded p-1 bg-white" />
+                                    )}
+                                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Email</label>
+                                <input type="text" value={branding.companyEmail} onChange={e => setBranding.setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Phone Numbers</label>
+                                <input type="text" value={branding.companyPhone} onChange={e => setBranding.setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Address</label>
+                                <input type="text" value={branding.companyAddress} onChange={e => setBranding.setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                            </div>
                         </div>
-                    )}
-                    {canManageCommunications && (
-                        <div className="bg-card p-6 rounded-lg shadow-lg">
-                            <h3 className="text-lg font-bold mb-4">Communications</h3>
-                            <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
-                        </div>
-                    )}
-                    {canManageCommunications && (
-                        <div className="bg-card p-6 rounded-lg shadow-lg">
-                            <h3 className="text-lg font-bold mb-4">Notification Templates</h3>
-                            <TemplateManager templates={templates} setTemplates={setTemplates} />
-                        </div>
-                    )}
+                    </div>
+
                     {/* Hide Department Management from Platform Owner */}
                     {canManageSettings && !isPlatformOwner && (
                         <div className="bg-card p-6 rounded-lg shadow-lg">
@@ -437,51 +469,18 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         </div>
                     )}
 
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">Branding</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Platform Name</label>
-                                <input type="text" value={branding.platformName} onChange={e => setBranding.setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Email</label>
-                                <input type="text" value={branding.companyEmail} onChange={e => setBranding.setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Phone Numbers</label>
-                                <input type="text" value={branding.companyPhone} onChange={e => setBranding.setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Company Address</label>
-                                <input type="text" value={branding.companyAddress} onChange={e => setBranding.setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
-                            </div>
-                            {/* Logo display logic would be handled by the input component, but we are just showing state here */}
-                            {branding.logoUrl && (
-                                <div>
-                                    <label className="block text-sm font-medium text-text-secondary mb-1">Current Logo</label>
-                                    <img src={branding.logoUrl} alt="Logo" className="h-12 w-auto border border-border rounded p-1" />
-                                </div>
-                            )}
+                    {canManageCommunications && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Communications</h3>
+                            <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
                         </div>
-                    </div>
-
-                    <div className="bg-card p-6 rounded-lg shadow-lg">
-                        <h3 className="text-lg font-bold mb-4">System Configuration</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Currency</label>
-                                <select value={branding.currency} onChange={e => setBranding.setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
-                                    <option value="NGN">NGN (₦)</option>
-                                    <option value="USD">USD ($)</option>
-                                    <option value="GBP">GBP (£)</option>
-                                    <option value="GHS">GHS (₵)</option>
-                                    <option value="KES">KES (KSh)</option>
-                                    <option value="ZAR">ZAR (R)</option>
-                                </select>
-                            </div>
+                    )}
+                    {canManageCommunications && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg">
+                            <h3 className="text-lg font-bold mb-4">Notification Templates</h3>
+                            <TemplateManager templates={templates} setTemplates={setTemplates} />
                         </div>
-                    </div>
+                    )}
 
                     <div className="bg-card p-6 rounded-lg shadow-lg">
                         <h3 className="text-lg font-bold mb-4">API & Integration Settings</h3>
@@ -528,6 +527,19 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                                     <p className="text-xs text-text-secondary mt-1">Enter days before lease expiry, separated by commas.</p>
                                 </div>
                             </div>
+                        </div>
+                    )}
+                    
+                    {canManageSettings && (
+                        <div className="bg-card p-6 rounded-lg shadow-lg border border-red-900/30">
+                            <h3 className="text-lg font-bold text-red-400 mb-4">System Actions</h3>
+                            <p className="text-sm text-text-secondary mb-4">Be careful with these actions. Resetting data is irreversible and will restore the application to its initial demo state.</p>
+                            <button
+                                onClick={() => setIsResetConfirmOpen(true)}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                            >
+                                Reset Application Data
+                            </button>
                         </div>
                     )}
                     
