@@ -1,6 +1,7 @@
 
 
 
+
 export enum PropertyStatus {
   Vacant = 'Vacant',
   Occupied = 'Occupied',
@@ -200,6 +201,7 @@ export enum NotificationType {
     LeaseExpiry = 'Lease Expiry Reminder',
     RentReminder = 'Rent Reminder',
     OverdueRent = 'Overdue Rent',
+    MaintenanceUpdate = 'Maintenance Update',
     PushNotification = 'Push Notification',
     Sms = 'SMS',
     Email = 'Email',

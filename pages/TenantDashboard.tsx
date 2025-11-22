@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Tenant, Property, Payment, Maintenance, Announcement, PaymentType, PaymentMethod, PaymentStatus, ManualPaymentDetails } from '../types';
 import TenantHeader from '../components/TenantHeader';
@@ -40,7 +31,8 @@ const MaintenanceRequestForm: React.FC<{
                 reader.onloadend = () => {
                     setImagePreviews(prev => [...prev, reader.result as string]);
                 };
-                reader.readAsDataURL(file);
+                // Fix: Cast file to Blob to satisfy FileReader.readAsDataURL signature
+                reader.readAsDataURL(file as Blob);
             });
         }
     };
@@ -61,7 +53,7 @@ const MaintenanceRequestForm: React.FC<{
         for (const file of images) {
             const base64 = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader();
-                reader.readAsDataURL(file as any);
+                reader.readAsDataURL(file as Blob);
                 reader.onload = () => resolve(reader.result as string);
                 reader.onerror = error => reject(error);
             });

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -366,6 +368,19 @@ const App = () => {
         return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
     }, [staffUser, roles, properties, payments, tenants, agents, maintenance, users, departments, commissionPayments]);
     
+    const handleSendNotification = (message: string, type: NotificationType, targetUserId?: string, targetTenantId?: string) => {
+        const newNotif: Notification = {
+            id: `notif-${Date.now()}-${Math.random()}`,
+            message,
+            date: new Date().toISOString(),
+            type,
+            targetUserId,
+            targetTenantId,
+            read: false,
+        };
+        setNotifications(prev => [newNotif, ...prev]);
+    };
+
     const handleLogin = (user: User | Tenant) => {
         setCurrentUser(user);
         const username = 'username' in user ? user.username : user.fullName;
@@ -549,7 +564,7 @@ const App = () => {
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
           case 'tenants': return <Tenants {...visibleData} templates={templates} setTenants={setTenants} setPayments={setPayments} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} onPrintReceipt={onPrintReceipt} onSendSms={onSendSms} addAuditLog={addAuditLog} />;
           case 'payments': return <Payments {...visibleData} setPayments={setPayments} currentUser={staffUser!} userHasPermission={userHasPermission} onPrintReceipt={onPrintReceipt} addAuditLog={addAuditLog} />;
-          case 'maintenance': return <MaintenancePage maintenance={visibleData.maintenance} properties={visibleData.properties} tenants={visibleData.tenants} users={visibleData.users} setMaintenance={setMaintenance} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
+          case 'maintenance': return <MaintenancePage maintenance={visibleData.maintenance} properties={visibleData.properties} tenants={visibleData.tenants} users={visibleData.users} setMaintenance={setMaintenance} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} sendNotification={handleSendNotification} />;
           case 'reports': return <Reports {...visibleData} currentUser={staffUser!} />;
           case 'agents': return <Agents {...visibleData} setAgents={setAgents} currentUser={staffUser!} userHasPermission={userHasPermission} commissionPayments={commissionPayments} setCommissionPayments={setCommissionPayments} addAuditLog={addAuditLog} />;
           case 'users': return <Users {...visibleData} setUsers={setUsers} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;

@@ -6,8 +6,10 @@
 
 
 
-import React, { useState } from 'react';
-import { Maintenance, Property, User, Permission, AuditLogEntry, Tenant } from '../types';
+
+
+import React, { useState, useMemo } from 'react';
+import { Maintenance, Property, User, Permission, AuditLogEntry, Tenant, NotificationType } from '../types';
 import Modal from '../components/Modal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -145,30 +147,64 @@ const MaintenancePage: React.FC<{
     currentUser: User;
     userHasPermission: (permission: Permission) => boolean;
     addAuditLog: (action: string, details: string, targetId?: string) => void;
-}> = ({ maintenance, properties, tenants, users, setMaintenance, currentUser, userHasPermission, addAuditLog }) => {
+    sendNotification: (message: string, type: NotificationType, targetUserId?: string) => void;
+}> = ({ maintenance, properties, tenants, users, setMaintenance, currentUser, userHasPermission, addAuditLog, sendNotification }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Maintenance | null>(null);
   const [chartView, setChartView] = useState<'property' | 'month'>('property');
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [propertyFilter, setPropertyFilter] = useState('All');
   
   const canManage = userHasPermission(Permission.MANAGE_MAINTENANCE);
   const getPropertyName = (propertyId: string) => properties.find(p => p.id === propertyId)?.name || 'N/A';
   const getTenantName = (tenantId?: string) => tenantId ? tenants.find(t => t.id === tenantId)?.fullName : 'N/A';
+  const getUserName = (userId?: string) => userId ? users.find(u => u.id === userId)?.name : 'Unassigned';
+
+  const filteredMaintenance = useMemo(() => {
+    return maintenance.filter(task => {
+        const matchesSearch = task.task.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              getPropertyName(task.propertyId).toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === 'All' || task.status === statusFilter;
+        const matchesProperty = propertyFilter === 'All' || task.propertyId === propertyFilter;
+        return matchesSearch && matchesStatus && matchesProperty;
+    });
+  }, [maintenance, searchQuery, statusFilter, propertyFilter, properties]);
 
   const handleSave = (task: Maintenance) => {
     const propertyName = getPropertyName(task.propertyId);
-    if (selectedTask) {
-      setMaintenance(maintenance.map(t => t.id === task.id ? task : t));
-      addAuditLog('UPDATED_MAINTENANCE', `Updated maintenance task '${task.task}' for ${propertyName}`, task.id);
-    } else {
-      setMaintenance([...maintenance, task]);
+    const isNew = !selectedTask;
+    const oldTask = isNew ? null : maintenance.find(t => t.id === task.id);
+
+    if (isNew) {
+      setMaintenance(prev => [task, ...prev]);
       addAuditLog('CREATED_MAINTENANCE', `Created maintenance task '${task.task}' for ${propertyName}`, task.id);
+    } else {
+      setMaintenance(prev => prev.map(t => t.id === task.id ? task : t));
+      addAuditLog('UPDATED_MAINTENANCE', `Updated maintenance task '${task.task}' for ${propertyName}`, task.id);
     }
+
+    // Notifications Logic
+    if (task.assignedToUserId) {
+        const assignedUser = users.find(u => u.id === task.assignedToUserId);
+        if (assignedUser) {
+            if (isNew) {
+                 sendNotification(`You have been assigned a new maintenance task: ${task.task} at ${propertyName}`, NotificationType.MaintenanceUpdate, task.assignedToUserId);
+            } else if (oldTask?.assignedToUserId !== task.assignedToUserId) {
+                 sendNotification(`You have been assigned a maintenance task: ${task.task} at ${propertyName}`, NotificationType.MaintenanceUpdate, task.assignedToUserId);
+            } else if (oldTask?.status !== task.status) {
+                 sendNotification(`Maintenance task "${task.task}" status updated to ${task.status}`, NotificationType.MaintenanceUpdate, task.assignedToUserId);
+            }
+        }
+    }
+
     setIsModalOpen(false);
     setSelectedTask(null);
   };
   
-  const getUserName = (userId?: string) => userId ? users.find(u => u.id === userId)?.name : 'Unassigned';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -225,6 +261,34 @@ const MaintenancePage: React.FC<{
             </button>
         )}
       </div>
+      
+      <div className="mb-6 bg-card p-4 rounded-lg flex flex-col md:flex-row gap-4 items-center">
+            <input
+                type="text"
+                placeholder="Search by task or property..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full md:w-1/3 bg-secondary p-2 rounded border border-border focus:ring-2 focus:ring-primary focus:outline-none"
+            />
+            <select 
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full md:w-1/4 bg-secondary p-2 rounded border border-border"
+            >
+                <option value="All">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <select 
+                value={propertyFilter} 
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                className="w-full md:w-1/4 bg-secondary p-2 rounded border border-border"
+            >
+                <option value="All">All Properties</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+      </div>
 
       <div className="bg-card p-6 rounded-lg shadow-lg mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -252,6 +316,7 @@ const MaintenancePage: React.FC<{
             <tr>
               <th className="p-4">Property</th>
               <th className="p-4">Task</th>
+              <th className="p-4">Requested By</th>
               <th className="p-4">Assigned To</th>
               <th className="p-4">Cost</th>
               <th className="p-4">Date</th>
@@ -260,15 +325,16 @@ const MaintenancePage: React.FC<{
             </tr>
           </thead>
           <tbody>
-            {maintenance.map(task => (
+            {filteredMaintenance.map(task => (
               <tr key={task.id} className="border-b border-border/50 hover:bg-secondary">
                 <td className="p-4">{getPropertyName(task.propertyId)}</td>
                 <td className="p-4">{task.task}</td>
+                <td className="p-4">{getTenantName(task.tenantId) || <span className="text-xs text-text-secondary italic">Staff</span>}</td>
                 <td className="p-4">{getUserName(task.assignedToUserId)}</td>
                 <td className="p-4">₦{(task.cost || 0).toLocaleString()}</td>
                 <td className="p-4">{task.date}</td>
                 <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(task.status)}`}>{task.status}</span></td>
-                <td className="p-4 space-x-2">
+                <td className="p-4 space-x-2 whitespace-nowrap">
                   <button onClick={() => handleViewDetails(task)} className="text-green-400 hover:text-green-300">Details</button>
                   {canManage && (
                       <button onClick={() => { setSelectedTask(task); setIsModalOpen(true); }} className="text-blue-400 hover:text-blue-300">Edit</button>
@@ -276,6 +342,11 @@ const MaintenancePage: React.FC<{
                 </td>
               </tr>
             ))}
+             {filteredMaintenance.length === 0 && (
+                <tr>
+                    <td colSpan={8} className="text-center p-6 text-text-secondary">No maintenance tasks match your filters.</td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -289,7 +360,7 @@ const MaintenancePage: React.FC<{
             <MaintenanceDetailModal 
                 task={selectedTask}
                 propertyName={getPropertyName(selectedTask.propertyId)}
-                tenantName={getTenantName(selectedTask.tenantId)}
+                tenantName={getTenantName(selectedTask.tenantId) || 'Staff'}
                 onClose={() => setIsDetailModalOpen(false)}
             />
         )}
