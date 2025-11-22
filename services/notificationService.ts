@@ -1,4 +1,5 @@
-import { SmsLogEntry, Tenant, ApiKeys } from '../types';
+
+import { SmsLogEntry, EmailLogEntry, Tenant, ApiKeys, User } from '../types';
 
 export const sendSms = (
   tenant: Tenant,
@@ -39,6 +40,41 @@ export const sendSms = (
   };
   addSmsLogEntry(logEntry);
 
-  // 5. Return success
   return { success: true, message: "SMS sent successfully (simulated)." };
+};
+
+export const sendEmail = (
+    recipient: { email: string; name: string },
+    subject: string,
+    body: string,
+    apiKeys: ApiKeys,
+    addEmailLogEntry: (log: EmailLogEntry) => void
+): { success: boolean; message: string } => {
+    // 1. Validation
+    if (!recipient.email) {
+        return { success: false, message: "Recipient has no email address." };
+    }
+
+    // 2. Simulate Resend API Call
+    console.log(`
+    --- SIMULATING RESEND EMAIL ---
+    To: ${recipient.name} <${recipient.email}>
+    Subject: ${subject}
+    Body: ${body}
+    Provider: Resend (Simulated)
+    -------------------------------
+    `);
+
+    // 3. Create Log Entry
+    const logEntry: EmailLogEntry = {
+        id: `email_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        recipientEmail: recipient.email,
+        recipientName: recipient.name,
+        subject: subject,
+        body: body
+    };
+    addEmailLogEntry(logEntry);
+
+    return { success: true, message: "Email sent via Resend (simulated)." };
 };

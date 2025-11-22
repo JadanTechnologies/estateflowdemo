@@ -56,18 +56,28 @@ const initialRoles: Role[] = [
       name: 'Platform Owner',
       permissions: [
         Permission.VIEW_PLATFORM_DASHBOARD,
-        Permission.MANAGE_USERS, // Can manage global users
-        Permission.MANAGE_SETTINGS,
-        Permission.MANAGE_ROLES, // Can add staff/roles
+        Permission.MANAGE_USERS, // Global User Management (Admins & Staff)
+        Permission.MANAGE_SETTINGS, // Global Settings
+        Permission.MANAGE_ROLES, // Global Roles
         Permission.VIEW_AUDIT_LOG,
-        Permission.MANAGE_SUBSCRIPTIONS, // Can manage payments/subscriptions
-        Permission.MANAGE_COMMUNICATIONS, // For Platform Owner Communication Center
-        Permission.MANAGE_NOTIFICATIONS // For Templates
+        Permission.MANAGE_SUBSCRIPTIONS, 
+        Permission.MANAGE_COMMUNICATIONS,
+        Permission.MANAGE_NOTIFICATIONS 
       ]
+    },
+    {
+        id: 'role_platform_support',
+        name: 'Platform Support',
+        permissions: [
+            Permission.VIEW_PLATFORM_DASHBOARD,
+            Permission.MANAGE_USERS,
+            Permission.VIEW_AUDIT_LOG,
+            Permission.MANAGE_COMMUNICATIONS
+        ]
     },
     { 
       id: 'role_super_admin', 
-      name: 'Super Admin', // THIS IS THE TENANT ADMIN
+      name: 'Super Admin', // THIS IS THE TENANT BUSINESS OWNER
       permissions: Object.values(Permission).filter(p => p !== Permission.VIEW_PLATFORM_DASHBOARD && p !== Permission.MANAGE_SUBSCRIPTIONS)
     },
     {
@@ -108,6 +118,7 @@ const getFutureDate = (days: number) => {
 
 const initialUsers: User[] = [
     { id: 'owner', name: 'Platform Owner', username: 'owner@estateflow.com', password: 'owner123', roleId: 'role_platform_owner', status: UserStatus.Active },
+    { id: 'support1', name: 'Support Staff', username: 'support@estateflow.com', password: 'password', roleId: 'role_platform_support', status: UserStatus.Active },
     { 
         id: 'user1', 
         name: 'Admin User', 
@@ -304,6 +315,10 @@ const App = () => {
             if (!loadedState.roles.find((r: Role) => r.id === 'role_platform_owner')) {
                 loadedState.roles.unshift(initialRoles[0]);
             }
+            if (!loadedState.roles.find((r: Role) => r.id === 'role_platform_support')) {
+                loadedState.roles.splice(1, 0, initialRoles[1]);
+            }
+
             const ownerUser = loadedState.users.find((u: User) => u.id === 'owner');
             if (ownerUser && ownerUser.roleId === 'role_super_admin') {
                 ownerUser.roleId = 'role_platform_owner';
@@ -400,7 +415,12 @@ const App = () => {
         }
         const role = roles.find(r => r.id === staffUser.roleId);
         
-        if (role?.name === 'Platform Owner' || role?.name === 'Super Admin' || role?.name === 'Accountant') {
+        // Platform Owner and Platform Support don't see specific tenant data by default in lists, only aggregated via modals in platform dashboard
+        if (role?.name === 'Platform Owner' || role?.name === 'Platform Support') {
+             return { properties: [], payments: [], tenants: [], agents: [], maintenance: [], users, departments, roles, commissionPayments: [] };
+        }
+
+        if (role?.name === 'Super Admin' || role?.name === 'Accountant') {
             return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
         }
         
@@ -428,6 +448,15 @@ const App = () => {
         return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
     }, [staffUser, roles, properties, payments, tenants, agents, maintenance, users, departments, commissionPayments]);
     
+    const playNotificationSound = () => {
+        try {
+            const audio = new Audio(NOTIFICATION_SOUND_BASE64);
+            audio.play().catch(e => console.warn("Audio playback blocked by browser:", e));
+        } catch (e) {
+            console.error("Error playing notification sound", e);
+        }
+    };
+
     const handleSendNotification = (message: string, type: NotificationType, targetUserId?: string, targetTenantId?: string) => {
         const newNotif: Notification = {
             id: `notif-${Date.now()}-${Math.random()}`,
@@ -438,7 +467,10 @@ const App = () => {
             targetTenantId,
             read: false,
         };
-        setNotifications(prev => [newNotif, ...prev]);
+        setNotifications(prev => {
+            playNotificationSound(); // Play sound on new notification
+            return [newNotif, ...prev]
+        });
     };
 
     const handleLogin = (user: User | Tenant) => {
@@ -563,15 +595,26 @@ const App = () => {
     };
 
     const onSendGlobalNotification = (target: 'all' | 'staff' | 'tenants', type: 'sms' | 'email' | 'in-app', message: string, subject?: string) => {
-        const newNotif: Notification = {
-            id: `notif-global-${Date.now()}`,
-            message: subject ? `${subject}: ${message}` : message,
-            date: new Date().toISOString(),
-            type: NotificationType.Global,
-            read: false,
-        };
-        setNotifications(prev => [newNotif, ...prev]);
+        // Logic to trigger In-App notifications
+        if (type === 'in-app') {
+            const newNotif: Notification = {
+                id: `notif-global-${Date.now()}`,
+                message: subject ? `${subject}: ${message}` : message,
+                date: new Date().toISOString(),
+                type: NotificationType.Global,
+                read: false,
+            };
+            setNotifications(prev => {
+                playNotificationSound();
+                return [newNotif, ...prev];
+            });
+        } 
+        // Logic for Email/SMS simulation log only since we don't have backend
         addAuditLog('SENT_BROADCAST', `Sent ${type} broadcast to ${target}. Subject: ${subject || 'N/A'}`);
+        
+        if (type === 'email' || type === 'sms') {
+            alert(`Broadcast sent via ${type} provider successfully (simulated).`);
+        }
     };
 
     const handleUpdateUser = (userId: string, updates: Partial<User>) => {
@@ -670,7 +713,10 @@ const App = () => {
                             id: existingNotifId, message: `Rent for ${tenant.fullName} is due in ${daysUntilDue} days.`,
                             date: new Date().toISOString(), type: NotificationType.RentReminder, read: false
                         };
-                        setNotifications(prev => [newNotif, ...prev]);
+                        setNotifications(prev => {
+                            playNotificationSound();
+                            return [newNotif, ...prev];
+                        });
                     }
                 }
             });
@@ -693,7 +739,10 @@ const App = () => {
                             id: existingNotifId, message: `Lease for ${tenant.fullName} at ${propertyName} expires in ${daysUntilExpiry} days.`,
                             date: new Date().toISOString(), type: NotificationType.LeaseExpiry, read: false,
                         };
-                        setNotifications(prev => [newNotif, ...prev]);
+                        setNotifications(prev => {
+                            playNotificationSound();
+                            return [newNotif, ...prev];
+                        });
                     }
                 }
             });

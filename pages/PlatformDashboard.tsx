@@ -29,6 +29,11 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
     const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<Partial<LandingPagePricingPlan> | null>(null);
+    
+    // Modal States for Dashboard Cards
+    const [isUserListModalOpen, setIsUserListModalOpen] = useState(false);
+    const [userListTitle, setUserListTitle] = useState('');
+    const [userListFilter, setUserListFilter] = useState<(u: User) => boolean>(() => () => false);
 
     // Role Filters
     const superAdminRole = roles.find(r => r.name === 'Super Admin');
@@ -51,6 +56,12 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
     }, 0);
 
     // --- Handlers ---
+
+    const handleCardClick = (title: string, filter: (u: User) => boolean) => {
+        setUserListTitle(title);
+        setUserListFilter(() => filter);
+        setIsUserListModalOpen(true);
+    };
 
     const handlePlanSave = (plan: LandingPagePricingPlan) => {
         const updatedPlans = editingPlan && landingPageConfig.pricing.plans.find(p => p.id === plan.id)
@@ -94,6 +105,14 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
         onUpdateUser(user.id, { status: user.status === 'Active' ? 'Suspended' : 'Active' });
     };
 
+    // Filter roles for Platform Staff only (exclude Tenant roles and Super Admin)
+    const platformRoles = roles.filter(r => 
+        r.name !== 'Super Admin' && 
+        r.name !== 'Property Manager' && 
+        r.name !== 'Agent' && 
+        r.name !== 'Accountant'
+    );
+
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
@@ -115,10 +134,37 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
             {activeSection === 'overview' && (
                 <div className="space-y-8 animate-fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <DashboardCard title="Total Revenue" value={`₦${monthlyRevenue.toLocaleString()}`} subValue="Monthly Recurring" icon={ICONS.payments} colorClass="bg-green-600" />
-                        <DashboardCard title="Total Businesses" value={totalBusinesses} subValue={`${trialUsers} on Trial`} icon={ICONS.properties} colorClass="bg-blue-600" />
-                        <DashboardCard title="Active Subs" value={activeSubscriptions} subValue="Paid Accounts" icon={ICONS.reports} colorClass="bg-indigo-600" />
-                        <DashboardCard title="Total Staff" value={staffUsers.length} subValue="Platform Team" icon={ICONS.users} colorClass="bg-purple-600" />
+                        <DashboardCard 
+                            title="Total Revenue" 
+                            value={`₦${monthlyRevenue.toLocaleString()}`} 
+                            subValue="Monthly Recurring" 
+                            icon={ICONS.payments} 
+                            colorClass="bg-green-600" 
+                        />
+                        <DashboardCard 
+                            title="Total Businesses" 
+                            value={totalBusinesses} 
+                            subValue={`${trialUsers} on Trial`} 
+                            icon={ICONS.properties} 
+                            colorClass="bg-blue-600"
+                            onClick={() => handleCardClick('Registered Businesses', (u) => u.roleId === superAdminRole?.id)} 
+                        />
+                        <DashboardCard 
+                            title="Trial Users" 
+                            value={trialUsers} 
+                            subValue="On Free Plan" 
+                            icon={ICONS.reports} 
+                            colorClass="bg-yellow-600"
+                            onClick={() => handleCardClick('Trial Users', (u) => u.roleId === superAdminRole?.id && u.subscriptionStatus === 'Trial')}
+                        />
+                        <DashboardCard 
+                            title="Total Staff" 
+                            value={staffUsers.length} 
+                            subValue="Platform Team" 
+                            icon={ICONS.users} 
+                            colorClass="bg-purple-600"
+                            onClick={() => handleCardClick('Platform Staff', (u) => u.roleId !== superAdminRole?.id)}
+                        />
                     </div>
                 </div>
             )}
@@ -222,8 +268,8 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
             {/* COMMUNICATIONS CENTER */}
             {activeSection === 'communications' && (
                 <div className="space-y-6 animate-fade-in">
-                    <h3 className="text-xl font-bold">Communication Center</h3>
-                    <p className="text-text-secondary">Broadcast messages to all businesses or platform staff.</p>
+                    <h3 className="text-xl font-bold">Global Communication Center</h3>
+                    <p className="text-text-secondary">Broadcast system-wide messages to all businesses or internal platform staff.</p>
                     <div className="bg-card p-6 rounded-lg border border-border">
                         <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
                     </div>
@@ -233,8 +279,8 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
             {/* TEMPLATE MANAGER */}
             {activeSection === 'templates' && (
                 <div className="space-y-6 animate-fade-in">
-                    <h3 className="text-xl font-bold">Notification Templates</h3>
-                    <p className="text-text-secondary">Manage global email and SMS templates.</p>
+                    <h3 className="text-xl font-bold">Global System Notification Templates</h3>
+                    <p className="text-text-secondary">Manage the default templates available for system notifications. These are distinct from tenant-specific templates.</p>
                     <div className="bg-card p-6 rounded-lg border border-border">
                         <TemplateManager templates={templates} setTemplates={setTemplates} />
                     </div>
@@ -341,7 +387,7 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
             <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title="Add Platform Staff">
                 <UserForm 
                     user={null} 
-                    roles={roles.filter(r => r.name !== 'Super Admin')} // Only internal roles
+                    roles={platformRoles} // Only allow selection of Platform-specific roles
                     departments={[]} 
                     onSave={(user, pass) => { onAddStaffUser(user, pass); setIsStaffModalOpen(false); }} 
                     onClose={() => setIsStaffModalOpen(false)} 
@@ -351,6 +397,38 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
             {/* Plan Editor Modal */}
             <Modal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} title={editingPlan?.id ? "Edit Pricing Plan" : "Create Pricing Plan"}>
                 <PlanEditor plan={editingPlan} onSave={handlePlanSave} onClose={() => setIsPlanModalOpen(false)} />
+            </Modal>
+
+            {/* Generic User List Modal for Clickable Cards */}
+            <Modal isOpen={isUserListModalOpen} onClose={() => setIsUserListModalOpen(false)} title={userListTitle}>
+                <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-left">
+                        <thead className="bg-secondary text-text-secondary">
+                            <tr>
+                                <th className="p-3">Name</th>
+                                <th className="p-3">Email</th>
+                                <th className="p-3">Plan/Role</th>
+                                <th className="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                            {users.filter(userListFilter).map(u => (
+                                <tr key={u.id}>
+                                    <td className="p-3">{u.name}</td>
+                                    <td className="p-3 text-sm text-text-secondary">{u.username}</td>
+                                    <td className="p-3 text-sm">{u.subscriptionPlan || roles.find(r => r.id === u.roleId)?.name}</td>
+                                    <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${u.status === 'Active' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>{u.status}</span></td>
+                                </tr>
+                            ))}
+                            {users.filter(userListFilter).length === 0 && (
+                                <tr><td colSpan={4} className="p-4 text-center text-text-secondary">No records found.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="flex justify-end pt-4">
+                    <button onClick={() => setIsUserListModalOpen(false)} className="bg-primary px-4 py-2 rounded text-white">Close</button>
+                </div>
             </Modal>
         </div>
     );

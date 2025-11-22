@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { NotificationTemplate } from '../types';
 
@@ -54,16 +55,16 @@ const CommunicationForm: React.FC<CommunicationFormProps> = ({ templates, onSend
                     <label className="block text-sm font-medium text-text-secondary mb-1">Target Audience</label>
                     <select value={target} onChange={e => setTarget(e.target.value as any)} className="w-full bg-secondary p-2 rounded border border-border">
                         <option value="all">All Users</option>
-                        <option value="staff">All Staff</option>
-                        <option value="tenants">All Tenants</option>
+                        <option value="staff">All Platform Staff</option>
+                        <option value="tenants">All Tenant Businesses</option>
                     </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-text-secondary mb-1">Channel</label>
                     <select value={type} onChange={e => setType(e.target.value as any)} className="w-full bg-secondary p-2 rounded border border-border">
-                        <option value="in-app">In-App Notification</option>
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
+                        <option value="in-app">In-App Notification (Bell Icon)</option>
+                        <option value="email">Email (via Resend)</option>
+                        <option value="sms">SMS (via Twilio)</option>
                     </select>
                 </div>
             </div>
