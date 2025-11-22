@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useMemo } from 'react';
 import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry } from '../types';
 import Modal from '../components/Modal';
@@ -530,7 +526,7 @@ const Tenants: React.FC<{
       const tenantName = tenants.find(t => t.id === tenantId)?.fullName;
       addAuditLog(
           type === 'tenant' ? 'TENANT_SIGNED_AGREEMENT' : 'MANAGEMENT_SIGNED_AGREEMENT',
-          `Agreement signed for tenant ${tenantName}`,
+          `Agreement signed for tenant ${tenantName} by ${type === 'tenant' ? 'tenant' : 'management'}`,
           tenantId
       );
   };

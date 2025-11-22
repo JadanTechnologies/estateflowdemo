@@ -31,7 +31,7 @@ const MaintenanceRequestForm: React.FC<{
                 reader.onloadend = () => {
                     setImagePreviews(prev => [...prev, reader.result as string]);
                 };
-                // Fix: Cast file to Blob to satisfy FileReader.readAsDataURL signature
+                // FIX: Cast file to Blob
                 reader.readAsDataURL(file as Blob);
             });
         }
@@ -207,11 +207,9 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant, tenants, setT
         setTenants(prevTenants => prevTenants.map(t => 
             t.id === tenant.id ? { ...t, tenantSignature: signatureData } : t
         ));
-        // Note: No audit log here since this is a tenant action
         alert('Signature saved successfully!');
     };
     
-    // Find the most up-to-date tenant object for the agreement
     const currentTenantData = tenants.find(t => t.id === tenant.id) || tenant;
 
 

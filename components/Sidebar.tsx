@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User, Permission } from '../types';
 import { NAV_LINKS, Logo } from '../constants';
@@ -22,7 +21,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentUser, activePage, setActivePag
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
         {accessibleLinks.map((link) => {
-          // FIX: Derive page name from href (removing #) to match App.tsx switch keys (e.g., 'emaillog' instead of 'email log')
+          // Derive page name from href (removing #) to match App.tsx switch keys
+          // e.g. '#emaillog' -> 'emaillog'
           const pageName = link.href.replace('#', '');
           const isActive = activePage === pageName || (activePage === 'dashboard' && link.name === 'Dashboard');
           return (

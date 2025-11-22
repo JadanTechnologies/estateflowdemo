@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User, Notification, Role } from '../types';
 import NotificationBell from './NotificationBell';

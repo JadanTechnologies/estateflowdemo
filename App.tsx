@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -18,6 +17,7 @@ import AuditLog from './pages/AuditLog';
 import AccessDenied from './pages/AccessDenied';
 import ThermalReceipt from './components/ThermalReceipt';
 import TenantDashboard from './pages/TenantDashboard';
+import LandingPage from './pages/LandingPage';
 import { NAV_LINKS, Logo } from './constants';
 import { sendSms } from './services/notificationService';
 import { NOTIFICATION_SOUND_BASE64 } from './components/NotificationSound';
@@ -194,11 +194,13 @@ const initialData = {
     departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog
 };
 
-const LoginPage: React.FC<{ onLogin: (user: User | Tenant) => void }> = ({ onLogin }) => {
+const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (user: User | Tenant) => void }> = ({ isOpen, onClose, onLogin }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const allLoginableUsers = useMemo(() => [...initialUsers, ...initialTenants], []);
+
+    if(!isOpen) return null;
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -212,13 +214,20 @@ const LoginPage: React.FC<{ onLogin: (user: User | Tenant) => void }> = ({ onLog
     }
     
     return (
-      <div className="flex flex-col min-h-screen bg-background">
-          <main className="flex-grow flex items-center justify-center p-4">
-            <div className="p-8 bg-card rounded-lg shadow-xl w-full max-w-sm">
-                <div className="flex justify-center mb-6">
-                    <Logo className="h-16 w-16 text-primary animate-levitate" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4 backdrop-blur-sm">
+            <div className="p-8 bg-card rounded-lg shadow-2xl w-full max-w-sm border border-indigo-500/30">
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center">
+                         <Logo className="h-10 w-10 text-primary" />
+                         <span className="ml-2 text-xl font-bold text-white">Login</span>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-                <h2 className="text-2xl font-bold text-center text-text-primary mb-2">Welcome Back</h2>
+
                 <p className="text-center text-text-secondary mb-6">Sign in to your EstateFlow account.</p>
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
@@ -227,7 +236,7 @@ const LoginPage: React.FC<{ onLogin: (user: User | Tenant) => void }> = ({ onLog
                             type="text"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
-                            className="mt-1 block w-full bg-secondary border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary"
+                            className="mt-1 block w-full bg-secondary border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary text-white"
                             placeholder="e.g. admin@estateflow.com"
                         />
                     </div>
@@ -237,20 +246,21 @@ const LoginPage: React.FC<{ onLogin: (user: User | Tenant) => void }> = ({ onLog
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
-                            className="mt-1 block w-full bg-secondary border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary"
+                            className="mt-1 block w-full bg-secondary border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary text-white"
                             placeholder="••••••••"
                         />
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded transition duration-200">
+                    <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded transition duration-200 shadow-[0_0_15px_rgba(79,70,229,0.5)]">
                         Login
                     </button>
                 </form>
+                 <div className="mt-6 text-center">
+                     <p className="text-xs text-gray-500">Demo Credentials:</p>
+                     <p className="text-xs text-gray-400">admin@estateflow.com / admin123</p>
+                     <p className="text-xs text-gray-400">tenant@estateflow.com / tenant123</p>
+                 </div>
             </div>
-          </main>
-          <footer className="text-center p-4 text-xs text-text-secondary">
-              Developed by Jadan Technologies
-          </footer>
       </div>
     );
 };
@@ -297,6 +307,7 @@ const App = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [paymentForReceipt, setPaymentForReceipt] = useState<Payment | null>(null);
     const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
     // Save state to local storage whenever it changes
     useEffect(() => {
@@ -382,6 +393,7 @@ const App = () => {
 
     const handleLogin = (user: User | Tenant) => {
         setCurrentUser(user);
+        setIsLoginModalOpen(false);
         const username = 'username' in user ? user.username : user.fullName;
         const newLog: AuditLogEntry = {
             id: `log-login-${Date.now()}`, timestamp: new Date().toISOString(), userId: user.id, username: username || 'Unknown',
@@ -459,6 +471,7 @@ const App = () => {
 
     useEffect(() => {
         const handleHashChange = () => {
+            // Remove # from hash to set active page correctly
             const hash = window.location.hash.replace('#', '');
             if (hash) {
                 setActivePage(hash);
@@ -526,7 +539,12 @@ const App = () => {
     }, [tenants, notifications, readNotificationIds, currentUser, leaseEndReminderDays, properties]);
     
     if (!currentUser) {
-        return <LoginPage onLogin={handleLogin} />;
+        return (
+            <>
+                <LandingPage onLoginClick={() => setIsLoginModalOpen(true)} />
+                <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
+            </>
+        );
     }
 
     const renderPage = () => {
