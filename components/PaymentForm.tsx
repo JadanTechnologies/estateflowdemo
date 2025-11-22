@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { Payment, Tenant, Property, PaymentType, PaymentStatus, PaymentMethod, ManualPaymentDetails } from '../types';
 import { PAYMENT_METHOD_ICONS } from '../constants';
@@ -39,10 +38,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
             return { balance: 0, balanceLabel: 'Balance' };
         }
 
+        // Only count Paid or Deposit status as reducing the debt.
+        // Unpaid or Pending payments do not reduce the balance due.
+        const isPaid = (p: Payment) => p.paymentStatus === PaymentStatus.Paid || p.paymentStatus === PaymentStatus.Deposit;
+
         if (formData.paymentType === PaymentType.Deposit) {
             const totalDepositDue = propertyForTenant.depositAmount || 0;
             const totalDepositPaid = payments
-                .filter(p => p.tenantId === formData.tenantId && p.paymentType === PaymentType.Deposit && p.id !== payment?.id)
+                .filter(p => p.tenantId === formData.tenantId && 
+                             p.paymentType === PaymentType.Deposit && 
+                             p.id !== payment?.id &&
+                             isPaid(p))
                 .reduce((sum, p) => sum + p.amountPaid, 0);
             
             const balance = totalDepositDue - totalDepositPaid;
@@ -52,7 +58,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
         // Default to Rent
         const totalRentDue = propertyForTenant.rentAmount || 0;
         const totalRentPaid = payments
-            .filter(p => p.tenantId === formData.tenantId && p.paymentType === PaymentType.Rent && p.id !== payment?.id)
+            .filter(p => p.tenantId === formData.tenantId && 
+                         p.paymentType === PaymentType.Rent && 
+                         p.id !== payment?.id &&
+                         isPaid(p))
             .reduce((sum, p) => sum + p.amountPaid, 0);
 
         const balance = totalRentDue - totalRentPaid;
@@ -121,6 +130,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
         onSave(finalPayment);
     };
 
+    const projectedBalance = balance - (formData.amountPaid || 0);
+    const projectedBalanceColor = projectedBalance > 0 ? 'text-red-400' : (projectedBalance < 0 ? 'text-green-400' : 'text-text-primary');
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -165,8 +177,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
                  <div className="p-2 bg-secondary rounded border border-border text-sm text-text-secondary md:col-span-2">
                     Date & Time: {payment?.date ? new Date(payment.date).toLocaleString() : 'Will be recorded on save'}
                 </div>
-                 <div className="p-2 bg-secondary rounded border border-border">{balanceLabel}: ₦{(balance).toLocaleString()}</div>
-                 <div className="p-2 bg-secondary rounded border border-border">Balance After this Pmt: ₦{(balance - (formData.amountPaid || 0)).toLocaleString()}</div>
+                 <div className="p-2 bg-secondary rounded border border-border">
+                    <span className="text-text-secondary text-sm block">{balanceLabel}</span>
+                    <span className="font-bold">₦{(balance).toLocaleString()}</span>
+                 </div>
+                 <div className="p-2 bg-secondary rounded border border-border">
+                    <span className="text-text-secondary text-sm block">Balance After this Pmt</span>
+                    <span className={`font-bold ${projectedBalanceColor}`}>₦{projectedBalance.toLocaleString()}</span>
+                 </div>
             </div>
             
             {isTenantFlow && formData.paymentMethod === PaymentMethod.Manual && manualPaymentDetails && (
@@ -206,3 +224,4 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ payment, tenants, properties,
 };
 
 export default PaymentForm;
+    
