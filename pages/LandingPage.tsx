@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 
 interface LandingPageProps {
   onLoginClick: () => void;
-  onSignup: (businessName: string, email: string, password: string, planId: string) => void;
+  onSignup: (businessName: string, email: string, password: string, planId: string, logoUrl: string, address: string, phone: string, country: string, currency: string) => void;
   config: LandingPageConfig;
 }
 
@@ -19,6 +19,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState('Nigeria');
+  const [currency, setCurrency] = useState('NGN');
+  const [logoFile, setLogoFile] = useState<string>('');
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -34,10 +39,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
       setIsSignupModalOpen(true);
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setLogoFile(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+
   const handleSignupSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(businessName && email && password && selectedPlanId) {
-          onSignup(businessName, email, password, selectedPlanId);
+      if(businessName && email && password && selectedPlanId && address && phone) {
+          onSignup(businessName, email, password, selectedPlanId, logoFile, address, phone, country, currency);
           setIsSignupModalOpen(false);
       }
   };
@@ -344,26 +360,73 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, confi
       {/* Signup Modal */}
       <Modal isOpen={isSignupModalOpen} onClose={() => setIsSignupModalOpen(false)} title="Start Your Free Trial">
           <form onSubmit={handleSignupSubmit} className="space-y-4 text-gray-300">
-              <div>
-                  <label className="block text-sm font-medium mb-1">Business Name</label>
-                  <input type="text" required value={businessName} onChange={e => setBusinessName(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="My Estate Management Co." />
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Business Name</label>
+                      <input type="text" required value={businessName} onChange={e => setBusinessName(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="My Estate Management Co." />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Company Logo</label>
+                      <input type="file" accept="image/*" onChange={handleLogoChange} className="w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" />
+                  </div>
               </div>
-              <div>
-                  <label className="block text-sm font-medium mb-1">Email Address (Username)</label>
-                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="admin@company.com" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Email Address</label>
+                      <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="admin@company.com" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Phone Number</label>
+                      <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="+234 800..." />
+                  </div>
               </div>
+
               <div>
-                  <label className="block text-sm font-medium mb-1">Create Password</label>
-                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="••••••••" />
+                  <label className="block text-sm font-medium mb-1">Office Address</label>
+                  <input type="text" required value={address} onChange={e => setAddress(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="123 Corporate Way..." />
               </div>
-              <div>
-                  <label className="block text-sm font-medium mb-1">Selected Plan</label>
-                  <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white">
-                      {config.pricing.plans.map(p => (
-                          <option key={p.id} value={p.id}>{p.name} - {p.price}{p.period}</option>
-                      ))}
-                  </select>
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Country</label>
+                      <select value={country} onChange={e => setCountry(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white">
+                          <option value="Nigeria">Nigeria</option>
+                          <option value="USA">USA</option>
+                          <option value="UK">UK</option>
+                          <option value="Ghana">Ghana</option>
+                          <option value="Kenya">Kenya</option>
+                          <option value="South Africa">South Africa</option>
+                      </select>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Currency</label>
+                      <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-border focus:border-indigo-500 outline-none text-white">
+                          <option value="NGN">NGN (₦)</option>
+                          <option value="USD">USD ($)</option>
+                          <option value="GBP">GBP (£)</option>
+                          <option value="GHS">GHS (₵)</option>
+                          <option value="KES">KES (KSh)</option>
+                          <option value="ZAR">ZAR (R)</option>
+                      </select>
+                  </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Create Password</label>
+                      <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="••••••••" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium mb-1">Selected Plan</label>
+                      <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white">
+                          {config.pricing.plans.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} - {p.price}{p.period}</option>
+                          ))}
+                      </select>
+                  </div>
+              </div>
+
               <div className="pt-4">
                   <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-all">
                       Create Account & Start Trial

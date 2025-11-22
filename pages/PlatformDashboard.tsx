@@ -1,10 +1,12 @@
 
 import React, { useState } from 'react';
-import { User, Role, LandingPageConfig, LandingPagePricingPlan, PlatformConfig } from '../types';
+import { User, Role, LandingPageConfig, LandingPagePricingPlan, PlatformConfig, NotificationTemplate, ManualPaymentDetails } from '../types';
 import DashboardCard from '../components/DashboardCard';
 import { ICONS } from '../constants';
 import UserForm from '../components/UserForm';
 import Modal from '../components/Modal';
+import CommunicationForm from '../components/CommunicationForm';
+import TemplateManager from '../components/TemplateManager';
 
 interface PlatformDashboardProps {
     users: User[];
@@ -15,11 +17,14 @@ interface PlatformDashboardProps {
     onSavePlatformConfig: (config: PlatformConfig) => void;
     onUpdateUser: (userId: string, updates: Partial<User>) => void;
     onDeleteUser: (userId: string) => void;
-    onAddStaffUser: (user: User, password?: string) => void; // New Prop
+    onAddStaffUser: (user: User, password?: string) => void;
+    templates: NotificationTemplate[];
+    setTemplates: React.Dispatch<React.SetStateAction<NotificationTemplate[]>>;
+    onSendGlobalNotification: (target: 'all' | 'staff' | 'tenants', type: 'sms' | 'email' | 'in-app', message: string, subject?: string) => void;
 }
 
-const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, landingPageConfig, platformConfig, onSaveLandingPageConfig, onSavePlatformConfig, onUpdateUser, onDeleteUser, onAddStaffUser }) => {
-    const [activeSection, setActiveSection] = useState<'overview' | 'businesses' | 'staff' | 'config'>('overview');
+const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, landingPageConfig, platformConfig, onSaveLandingPageConfig, onSavePlatformConfig, onUpdateUser, onDeleteUser, onAddStaffUser, templates, setTemplates, onSendGlobalNotification }) => {
+    const [activeSection, setActiveSection] = useState<'overview' | 'businesses' | 'staff' | 'config' | 'communications' | 'templates' | 'settings'>('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
@@ -31,7 +36,7 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
     
     // Data Segregation
     const businessAdmins = users.filter(u => u.roleId === superAdminRole?.id);
-    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id); // Everyone else is considered internal staff or specific roles in this simplified view
+    const staffUsers = users.filter(u => u.roleId !== superAdminRole?.id); 
 
     // KPIs
     const totalBusinesses = businessAdmins.length;
@@ -74,6 +79,17 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
         onSavePlatformConfig({ ...platformConfig, defaultTrialDurationDays: days });
     };
 
+    const handleBankDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        onSavePlatformConfig({
+            ...platformConfig,
+            subscriptionBankDetails: {
+                ...(platformConfig.subscriptionBankDetails || { bankName: '', accountName: '', accountNumber: '' }),
+                [name]: value
+            }
+        });
+    };
+
     const toggleUserStatus = (user: User) => {
         onUpdateUser(user.id, { status: user.status === 'Active' ? 'Suspended' : 'Active' });
     };
@@ -97,8 +113,17 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
                     <button onClick={() => setActiveSection('staff')} className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeSection === 'staff' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-secondary'}`}>
                         {ICONS.users} <span className="ml-3">Platform Staff</span>
                     </button>
+                    <button onClick={() => setActiveSection('communications')} className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeSection === 'communications' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-secondary'}`}>
+                        {ICONS.email} <span className="ml-3">Comm. Center</span>
+                    </button>
+                    <button onClick={() => setActiveSection('templates')} className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeSection === 'templates' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-secondary'}`}>
+                        {ICONS.maintenance} <span className="ml-3">Templates</span>
+                    </button>
                     <button onClick={() => setActiveSection('config')} className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeSection === 'config' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-secondary'}`}>
                         {ICONS.settings} <span className="ml-3">System Config</span>
+                    </button>
+                    <button onClick={() => setActiveSection('settings')} className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeSection === 'settings' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-secondary'}`}>
+                        {ICONS.payments} <span className="ml-3">Payment Settings</span>
                     </button>
                 </nav>
             </div>
@@ -147,7 +172,10 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
                                 <tbody className="divide-y divide-border/50">
                                     {businessAdmins.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase())).map(admin => (
                                         <tr key={admin.id} className="hover:bg-secondary/20">
-                                            <td className="p-4 font-medium">{admin.name}</td>
+                                            <td className="p-4 font-medium">
+                                                <div>{admin.name}</div>
+                                                {admin.businessProfile && <div className="text-xs text-text-secondary">{admin.businessProfile.country} • {admin.businessProfile.currency}</div>}
+                                            </td>
                                             <td className="p-4 text-sm text-text-secondary">{admin.username}</td>
                                             <td className="p-4"><span className="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs border border-blue-700">{admin.subscriptionPlan}</span></td>
                                             <td className="p-4">
@@ -208,6 +236,69 @@ const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ users, roles, lan
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* COMMUNICATIONS CENTER */}
+                {activeSection === 'communications' && (
+                    <div className="space-y-6">
+                        <h2 className="text-3xl font-bold">Communication Center</h2>
+                        <p className="text-text-secondary">Broadcast messages to all businesses or platform staff.</p>
+                        <div className="bg-card p-6 rounded-lg border border-border">
+                            <CommunicationForm templates={templates} onSend={onSendGlobalNotification} />
+                        </div>
+                    </div>
+                )}
+
+                {/* TEMPLATE MANAGER */}
+                {activeSection === 'templates' && (
+                    <div className="space-y-6">
+                        <h2 className="text-3xl font-bold">Notification Templates</h2>
+                        <p className="text-text-secondary">Manage global email and SMS templates.</p>
+                        <div className="bg-card p-6 rounded-lg border border-border">
+                            <TemplateManager templates={templates} setTemplates={setTemplates} />
+                        </div>
+                    </div>
+                )}
+
+                {/* PAYMENT SETTINGS */}
+                {activeSection === 'settings' && (
+                    <div className="space-y-6">
+                        <h2 className="text-3xl font-bold">Payment Settings</h2>
+                        <p className="text-text-secondary">Configure how the platform receives subscription payments from business clients.</p>
+                        
+                        <div className="bg-card p-6 rounded-lg border border-border max-w-xl">
+                            <h3 className="text-xl font-bold mb-4">Subscription Bank Details</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Bank Name</label>
+                                    <input 
+                                        name="bankName" 
+                                        value={platformConfig.subscriptionBankDetails?.bankName || ''} 
+                                        onChange={handleBankDetailsChange}
+                                        className="w-full bg-secondary p-2 rounded border border-border" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Account Name</label>
+                                    <input 
+                                        name="accountName" 
+                                        value={platformConfig.subscriptionBankDetails?.accountName || ''} 
+                                        onChange={handleBankDetailsChange}
+                                        className="w-full bg-secondary p-2 rounded border border-border" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Account Number</label>
+                                    <input 
+                                        name="accountNumber" 
+                                        value={platformConfig.subscriptionBankDetails?.accountNumber || ''} 
+                                        onChange={handleBankDetailsChange}
+                                        className="w-full bg-secondary p-2 rounded border border-border" 
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

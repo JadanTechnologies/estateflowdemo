@@ -38,6 +38,7 @@ import {
   AuditLogEntry,
   LandingPageConfig,
   PlatformConfig,
+  BusinessProfile,
 } from './types';
 
 // MOCK DATA
@@ -59,7 +60,9 @@ const initialRoles: Role[] = [
         Permission.MANAGE_SETTINGS,
         Permission.MANAGE_ROLES, // Can add staff/roles
         Permission.VIEW_AUDIT_LOG,
-        Permission.MANAGE_SUBSCRIPTIONS // Can manage payments/subscriptions
+        Permission.MANAGE_SUBSCRIPTIONS, // Can manage payments/subscriptions
+        Permission.MANAGE_COMMUNICATIONS, // For Platform Owner Communication Center
+        Permission.MANAGE_NOTIFICATIONS // For Templates
       ]
     },
     { 
@@ -115,7 +118,14 @@ const initialUsers: User[] = [
         // Subscription data for the business admin
         subscriptionPlan: 'Professional',
         subscriptionStatus: 'Active',
-        subscriptionExpiry: getFutureDate(30) 
+        subscriptionExpiry: getFutureDate(30),
+        businessProfile: {
+            companyName: 'Admin Estates Ltd',
+            address: '123 Admin Way',
+            phone: '0800-ADMIN',
+            country: 'Nigeria',
+            currency: 'NGN'
+        }
     },
     { id: 'user2', name: 'Manager User', username: 'manager@estateflow.com', password: 'manager123', roleId: 'role_manager', departmentId: 'dept_res', status: UserStatus.Active },
     { id: 'user3', name: 'Accountant User', username: 'accountant@estateflow.com', password: 'accountant123', roleId: 'role_accountant', status: UserStatus.Active },
@@ -192,7 +202,12 @@ const initialTemplates: NotificationTemplate[] = [
 ];
 
 const initialPlatformConfig: PlatformConfig = {
-    defaultTrialDurationDays: 14
+    defaultTrialDurationDays: 14,
+    subscriptionBankDetails: {
+        bankName: 'GTBank',
+        accountName: 'EstateFlow Platform',
+        accountNumber: '0000000000'
+    }
 };
 
 const LOCAL_STORAGE_KEY = 'estateFlowData';
@@ -335,6 +350,14 @@ const App = () => {
     const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+    // Branding State (Lifted from Settings)
+    const [platformName, setPlatformName] = useState('EstateFlow');
+    const [companyEmail, setCompanyEmail] = useState('contact@estateflow.com');
+    const [companyPhone, setCompanyPhone] = useState('08012345678, 09087654321');
+    const [companyAddress, setCompanyAddress] = useState('123 Property Lane, Real Estate City, Lagos');
+    const [currency, setCurrency] = useState('NGN');
+    const [logoUrl, setLogoUrl] = useState<string>(''); // New State for Logo
+
     useEffect(() => {
         const stateToSave = {
             departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig
@@ -430,6 +453,21 @@ const App = () => {
 
         if ('roleId' in user) {
             const staffUser = user as User;
+            
+            // Load Business Profile into Branding State
+            if (staffUser.businessProfile) {
+                const bp = staffUser.businessProfile;
+                setPlatformName(bp.companyName);
+                setCompanyAddress(bp.address);
+                setCompanyPhone(bp.phone);
+                setCurrency(bp.currency);
+                if(bp.logoUrl) setLogoUrl(bp.logoUrl);
+            } else {
+                // Reset to defaults if no profile
+                setPlatformName('EstateFlow');
+                setCurrency('NGN');
+            }
+
             const hasPermission = (permission: Permission): boolean => {
                 const userRole = roles.find(r => r.id === staffUser.roleId);
                 return userRole?.permissions.includes(permission) ?? false;
@@ -459,7 +497,7 @@ const App = () => {
     };
 
     // --- Business Signup Handler ---
-    const handleBusinessSignup = (name: string, email: string, pass: string, planId: string) => {
+    const handleBusinessSignup = (name: string, email: string, pass: string, planId: string, logo: string, address: string, phone: string, country: string, currency: string) => {
         const superAdminRoleId = roles.find(r => r.name === 'Super Admin')?.id;
         const plan = landingPageConfig.pricing.plans.find(p => p.id === planId);
         
@@ -479,10 +517,26 @@ const App = () => {
             subscriptionPlan: plan.name,
             subscriptionPlanId: plan.id,
             subscriptionStatus: 'Trial',
-            subscriptionExpiry: expiry.toISOString().split('T')[0]
+            subscriptionExpiry: expiry.toISOString().split('T')[0],
+            businessProfile: {
+                companyName: name,
+                logoUrl: logo,
+                address: address,
+                phone: phone,
+                country: country,
+                currency: currency
+            }
         };
 
         setUsers(prev => [...prev, newUser]);
+        
+        // Login and set branding immediately
+        setPlatformName(name);
+        setCompanyAddress(address);
+        setCompanyPhone(phone);
+        setCurrency(currency);
+        setLogoUrl(logo);
+        
         handleLogin(newUser);
     };
 
@@ -691,6 +745,12 @@ const App = () => {
             return <AccessDenied />;
         }
 
+        // Props for Settings Component including branding
+        const brandingProps = {
+            branding: { platformName, companyEmail, companyPhone, companyAddress, currency, logoUrl },
+            setBranding: { setPlatformName, setCompanyEmail, setCompanyPhone, setCompanyAddress, setCurrency }
+        };
+
         switch(pageToRender) {
           case 'platform-dashboard': 
             return <PlatformDashboard 
@@ -703,6 +763,9 @@ const App = () => {
                 onUpdateUser={handleUpdateUser} 
                 onDeleteUser={handleDeleteUser} 
                 onAddStaffUser={handleAddStaffUser}
+                templates={templates} // Pass templates
+                setTemplates={setTemplates}
+                onSendGlobalNotification={onSendGlobalNotification} // Pass communication func
             />;
           case 'dashboard': return <Dashboard {...visibleData} currentUser={staffUser!} />;
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
@@ -712,19 +775,19 @@ const App = () => {
           case 'reports': return <Reports {...visibleData} currentUser={staffUser!} />;
           case 'agents': return <Agents {...visibleData} setAgents={setAgents} currentUser={staffUser!} userHasPermission={userHasPermission} commissionPayments={commissionPayments} setCommissionPayments={setCommissionPayments} addAuditLog={addAuditLog} />;
           case 'users': return <Users {...visibleData} setUsers={setUsers} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
-          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={handleLandingPageConfigSave} />;
+          case 'settings': return <Settings leaseEndReminderDays={leaseEndReminderDays} setLeaseEndReminderDays={setLeaseEndReminderDays} userHasPermission={userHasPermission} roles={roles} setRoles={setRoles} users={users} departments={departments} setDepartments={setDepartments} properties={properties} agents={agents} apiKeys={apiKeys} setApiKeys={setApiKeys} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification} manualPaymentDetails={manualPaymentDetails} setManualPaymentDetails={setManualPaymentDetails} addAuditLog={addAuditLog} landingPageConfig={landingPageConfig} setLandingPageConfig={handleLandingPageConfigSave} {...brandingProps} />;
           case 'emaillog': return <EmailLog emailLog={emailLog} />;
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;
           case 'auditlog': return <AuditLog auditLog={auditLog} />;
-          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} platformConfig={platformConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onSavePlatformConfig={handlePlatformConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddStaffUser={handleAddStaffUser} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
+          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} platformConfig={platformConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onSavePlatformConfig={handlePlatformConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddStaffUser={handleAddStaffUser} templates={templates} setTemplates={setTemplates} onSendGlobalNotification={onSendGlobalNotification}/> : <Dashboard {...visibleData} currentUser={staffUser!} />;
         }
     };
 
     return (
         <>
             <div className={`flex h-screen bg-background text-text-primary`}>
-                {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} />}
+                {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} customLogo={logoUrl} customTitle={platformName} />}
                 
                 <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isStaff ? (isSidebarOpen ? 'ml-64' : 'ml-20') : ''}`}>
                     {isStaff && <Header 
@@ -744,7 +807,7 @@ const App = () => {
                         {renderPage()}
                     </main>
                     <footer className="text-center p-4 text-xs text-text-secondary">
-                        Developed by <span className="text-primary font-semibold">Jadan Technologies</span>
+                        Powered by <span className="text-primary font-semibold">Jadan Technologies</span>
                     </footer>
                 </div>
                 

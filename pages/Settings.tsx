@@ -185,14 +185,24 @@ interface SettingsProps {
     addAuditLog: (action: string, details: string, targetId?: string) => void;
     landingPageConfig: LandingPageConfig;
     setLandingPageConfig: (config: LandingPageConfig) => void;
+    branding: {
+        platformName: string;
+        companyEmail: string;
+        companyPhone: string;
+        companyAddress: string;
+        currency: string;
+        logoUrl: string;
+    };
+    setBranding: {
+        setPlatformName: (v: string) => void;
+        setCompanyEmail: (v: string) => void;
+        setCompanyPhone: (v: string) => void;
+        setCompanyAddress: (v: string) => void;
+        setCurrency: (v: string) => void;
+    };
 }
 
-const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog, landingPageConfig, setLandingPageConfig }) => {
-    const [platformName, setPlatformName] = useState('EstateFlow');
-    const [companyEmail, setCompanyEmail] = useState('contact@estateflow.com');
-    const [companyPhone, setCompanyPhone] = useState('08012345678, 09087654321');
-    const [companyAddress, setCompanyAddress] = useState('123 Property Lane, Real Estate City, Lagos');
-    const [currency, setCurrency] = useState('NGN');
+const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndReminderDays, userHasPermission, roles, setRoles, users, departments, setDepartments, properties, agents, apiKeys, setApiKeys, templates, setTemplates, onSendGlobalNotification, manualPaymentDetails, setManualPaymentDetails, addAuditLog, landingPageConfig, setLandingPageConfig, branding, setBranding }) => {
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -432,24 +442,27 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Platform Name</label>
-                                <input type="text" value={platformName} onChange={e => setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <input type="text" value={branding.platformName} onChange={e => setBranding.setPlatformName(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Company Email</label>
-                                <input type="text" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <input type="text" value={branding.companyEmail} onChange={e => setBranding.setCompanyEmail(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Company Phone Numbers</label>
-                                <input type="text" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
+                                <input type="text" value={branding.companyPhone} onChange={e => setBranding.setCompanyPhone(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" placeholder="e.g., 08012345678, 09087654321"/>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Company Address</label>
-                                <input type="text" value={companyAddress} onChange={e => setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
+                                <input type="text" value={branding.companyAddress} onChange={e => setBranding.setCompanyAddress(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border" />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-secondary mb-1">Platform Logo</label>
-                                <input type="file" className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"/>
-                            </div>
+                            {/* Logo display logic would be handled by the input component, but we are just showing state here */}
+                            {branding.logoUrl && (
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Current Logo</label>
+                                    <img src={branding.logoUrl} alt="Logo" className="h-12 w-auto border border-border rounded p-1" />
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -458,9 +471,13 @@ const Settings: React.FC<SettingsProps> = ({ leaseEndReminderDays, setLeaseEndRe
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-text-secondary mb-1">Currency</label>
-                                <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
+                                <select value={branding.currency} onChange={e => setBranding.setCurrency(e.target.value)} className="w-full bg-secondary p-2 rounded border border-border">
                                     <option value="NGN">NGN (₦)</option>
                                     <option value="USD">USD ($)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="GHS">GHS (₵)</option>
+                                    <option value="KES">KES (KSh)</option>
+                                    <option value="ZAR">ZAR (R)</option>
                                 </select>
                             </div>
                         </div>

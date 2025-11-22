@@ -194,6 +194,15 @@ export enum UserStatus {
     Banned = 'Banned',
 }
 
+export interface BusinessProfile {
+    companyName: string;
+    logoUrl?: string;
+    address: string;
+    phone: string;
+    country: string;
+    currency: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -208,6 +217,9 @@ export interface User {
   subscriptionPlan?: string; // Name of the plan (legacy, kept for compatibility)
   subscriptionStatus?: 'Active' | 'Expired' | 'Trial';
   subscriptionExpiry?: string;
+  
+  // Business Settings
+  businessProfile?: BusinessProfile;
 }
 
 export enum NotificationType {
@@ -309,6 +321,7 @@ export interface AuditLogEntry {
 // Platform Global Configuration
 export interface PlatformConfig {
     defaultTrialDurationDays: number;
+    subscriptionBankDetails?: ManualPaymentDetails;
 }
 
 // Landing Page Configuration Types
