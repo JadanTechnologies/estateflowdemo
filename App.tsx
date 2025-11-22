@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -43,6 +41,11 @@ import {
 // MOCK DATA
 
 // --- SAMPLE LOGIN CREDENTIALS ---
+//
+// === Platform Owner ===
+// Owner:
+//   - username: owner@estateflow.com
+//   - password: owner123
 //
 // === Staff Logins ===
 // Super Admin:
@@ -111,6 +114,7 @@ const initialRoles: Role[] = [
 ];
 
 const initialUsers: User[] = [
+    { id: 'owner', name: 'Platform Owner', username: 'owner@estateflow.com', password: 'owner123', roleId: 'role_super_admin', status: UserStatus.Active },
     { id: 'user1', name: 'Admin User', username: 'admin@estateflow.com', password: 'admin123', roleId: 'role_super_admin', status: UserStatus.Active },
     { id: 'user2', name: 'Manager User', username: 'manager@estateflow.com', password: 'manager123', roleId: 'role_manager', departmentId: 'dept_res', status: UserStatus.Active },
     { id: 'user3', name: 'Accountant User', username: 'accountant@estateflow.com', password: 'accountant123', roleId: 'role_accountant', status: UserStatus.Active },
@@ -261,6 +265,7 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (use
                 </form>
                  <div className="mt-6 text-center">
                      <p className="text-xs text-gray-500">Demo Credentials:</p>
+                     <p className="text-xs text-gray-400">owner@estateflow.com / owner123 (Owner)</p>
                      <p className="text-xs text-gray-400">admin@estateflow.com / admin123</p>
                      <p className="text-xs text-gray-400">tenant@estateflow.com / tenant123</p>
                  </div>
@@ -623,7 +628,7 @@ const App = () => {
                         {renderPage()}
                     </main>
                     <footer className="text-center p-4 text-xs text-text-secondary">
-                        Developed by Jadan Technologies
+                        Developed by <span className="text-primary font-semibold">Jadan Technologies</span>
                     </footer>
                 </div>
                 
