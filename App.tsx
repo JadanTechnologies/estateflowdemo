@@ -415,13 +415,17 @@ const App = () => {
         }
         const role = roles.find(r => r.id === staffUser.roleId);
         
-        // Platform Owner and Platform Support don't see specific tenant data by default in lists, only aggregated via modals in platform dashboard
+        // Platform Owner: See Platform Staff Only in standard lists
         if (role?.name === 'Platform Owner' || role?.name === 'Platform Support') {
-             return { properties: [], payments: [], tenants: [], agents: [], maintenance: [], users, departments, roles, commissionPayments: [] };
+             const platformStaff = users.filter(u => ['role_platform_owner', 'role_platform_support'].includes(u.roleId));
+             return { properties: [], payments: [], tenants: [], agents: [], maintenance: [], users: platformStaff, departments, roles, commissionPayments: [] };
         }
 
+        // Tenant Admin (Super Admin)
         if (role?.name === 'Super Admin' || role?.name === 'Accountant') {
-            return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
+            // Filter users to show only Non-Platform staff (Tenant Staff + Admin)
+            const tenantUsers = users.filter(u => !['role_platform_owner', 'role_platform_support'].includes(u.roleId));
+            return { properties, payments, tenants, agents, maintenance, users: tenantUsers, departments, roles, commissionPayments };
         }
         
         if (role?.name === 'Property Manager') {
@@ -433,7 +437,9 @@ const App = () => {
             const managerAgentIds = new Set(managerProperties.map(p => p.agentId));
             const managerAgents = agents.filter(a => managerAgentIds.has(a.id));
             const managerCommissionPayments = commissionPayments.filter(cp => managerAgentIds.has(cp.agentId));
-            return { properties: managerProperties, payments: managerPayments, tenants: managerTenants, agents: managerAgents, maintenance: managerMaintenance, users, departments, roles, commissionPayments: managerCommissionPayments };
+            // Managers can see users in their department or general staff? Simplifying to Tenant Users for now
+            const tenantUsers = users.filter(u => !['role_platform_owner', 'role_platform_support'].includes(u.roleId));
+            return { properties: managerProperties, payments: managerPayments, tenants: managerTenants, agents: managerAgents, maintenance: managerMaintenance, users: tenantUsers, departments, roles, commissionPayments: managerCommissionPayments };
         }
         if (role?.name === 'Agent') {
             const agentProperties = properties.filter(p => p.agentId === staffUser.id);
@@ -443,7 +449,7 @@ const App = () => {
             const agentMaintenance = maintenance.filter(m => propertyIds.has(m.propertyId));
             const agent = agents.find(a=>a.id === staffUser.id);
             const agentCommissionPayments = commissionPayments.filter(cp => cp.agentId === staffUser.id);
-            return { properties: agentProperties, payments: agentPayments, tenants: agentTenants, agents: agent ? [agent] : [], maintenance: agentMaintenance, users, departments, roles, commissionPayments: agentCommissionPayments };
+            return { properties: agentProperties, payments: agentPayments, tenants: agentTenants, agents: agent ? [agent] : [], maintenance: agentMaintenance, users: [], departments, roles, commissionPayments: agentCommissionPayments };
         }
         return { properties, payments, tenants, agents, maintenance, users, departments, roles, commissionPayments };
     }, [staffUser, roles, properties, payments, tenants, agents, maintenance, users, departments, commissionPayments]);
