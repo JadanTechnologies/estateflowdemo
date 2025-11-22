@@ -117,9 +117,43 @@ export const INITIAL_LANDING_PAGE_CONFIG: LandingPageConfig = {
         title: "Simple, Transparent Pricing",
         subtitle: "Choose the plan that fits your portfolio size.",
         plans: [
-            { name: "Starter", price: "₦0", period: "/mo", features: ["Up to 5 Properties", "Basic Reporting", "Tenant Portal"] },
-            { name: "Professional", price: "₦15,000", period: "/mo", features: ["Up to 50 Properties", "Advanced Analytics", "SMS Notifications", "Priority Support"], highlighted: true },
-            { name: "Enterprise", price: "Custom", period: "", features: ["Unlimited Properties", "Dedicated Account Manager", "Custom Integrations", "White Labeling"] }
+            { 
+                id: 'plan-starter',
+                name: "Starter", 
+                price: "₦0", 
+                period: "/mo", 
+                features: ["Up to 5 Properties", "Basic Reporting", "Tenant Portal"],
+                maxProperties: 5,
+                maxUsers: 1,
+                maxTenants: 5,
+                enableAiReports: false,
+                enableSms: false
+            },
+            { 
+                id: 'plan-pro',
+                name: "Professional", 
+                price: "₦15,000", 
+                period: "/mo", 
+                features: ["Up to 50 Properties", "Advanced Analytics", "SMS Notifications", "Priority Support"], 
+                highlighted: true,
+                maxProperties: 50,
+                maxUsers: 5,
+                maxTenants: 100,
+                enableAiReports: true,
+                enableSms: true
+            },
+            { 
+                id: 'plan-ent',
+                name: "Enterprise", 
+                price: "Custom", 
+                period: "", 
+                features: ["Unlimited Properties", "Dedicated Account Manager", "Custom Integrations", "White Labeling"],
+                maxProperties: -1,
+                maxUsers: -1,
+                maxTenants: -1,
+                enableAiReports: true,
+                enableSms: true
+            }
         ]
     },
     testimonials: {

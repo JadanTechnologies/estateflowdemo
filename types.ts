@@ -204,7 +204,8 @@ export interface User {
   departmentId?: string; // Optional: Only for Property Managers
   
   // Platform Subscription Fields (For Tenant Admins)
-  subscriptionPlan?: string;
+  subscriptionPlanId?: string; // ID of the plan
+  subscriptionPlan?: string; // Name of the plan (legacy, kept for compatibility)
   subscriptionStatus?: 'Active' | 'Expired' | 'Trial';
   subscriptionExpiry?: string;
 }
@@ -305,6 +306,11 @@ export interface AuditLogEntry {
   targetId?: string; // ID of the property, tenant, user etc.
 }
 
+// Platform Global Configuration
+export interface PlatformConfig {
+    defaultTrialDurationDays: number;
+}
+
 // Landing Page Configuration Types
 export interface LandingPageFeature {
     title: string;
@@ -313,11 +319,19 @@ export interface LandingPageFeature {
 }
 
 export interface LandingPagePricingPlan {
+    id: string;
     name: string;
     price: string;
-    period: string;
-    features: string[];
+    period: string; // e.g., "/mo"
+    features: string[]; // Text description of features for the landing page
     highlighted?: boolean;
+    
+    // System Limits & Feature Gates
+    maxProperties: number; // -1 for unlimited
+    maxUsers: number;
+    maxTenants: number;
+    enableAiReports: boolean;
+    enableSms: boolean;
 }
 
 export interface LandingPageFaq {

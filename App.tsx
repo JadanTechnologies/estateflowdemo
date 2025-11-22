@@ -37,6 +37,7 @@ import {
   ManualPaymentDetails,
   AuditLogEntry,
   LandingPageConfig,
+  PlatformConfig,
 } from './types';
 
 // MOCK DATA
@@ -63,7 +64,7 @@ const initialRoles: Role[] = [
     },
     { 
       id: 'role_super_admin', 
-      name: 'Super Admin', 
+      name: 'Super Admin', // THIS IS THE TENANT ADMIN
       permissions: Object.values(Permission).filter(p => p !== Permission.VIEW_PLATFORM_DASHBOARD && p !== Permission.MANAGE_SUBSCRIPTIONS)
     },
     {
@@ -190,10 +191,14 @@ const initialTemplates: NotificationTemplate[] = [
     { id: 'tmpl-welcome', name: 'Welcome Email', type: TemplateType.Welcome, subject: 'Welcome to {propertyName}!', body: 'Dear {tenantName},\n\nWelcome to your new home at {propertyName}! We are thrilled to have you as a tenant. Please find attached your tenancy agreement and other important documents.\n\nBest regards,\nEstateFlow Management' },
 ];
 
+const initialPlatformConfig: PlatformConfig = {
+    defaultTrialDurationDays: 14
+};
+
 const LOCAL_STORAGE_KEY = 'estateFlowData';
 
 const initialData = {
-    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog, landingPageConfig: INITIAL_LANDING_PAGE_CONFIG
+    departments: initialDepartments, roles: initialRoles, users: initialUsers, agents: initialAgents, properties: initialProperties, tenants: initialTenants, payments: initialPayments, maintenance: initialMaintenance, notifications: initialNotifications, commissionPayments: initialCommissionPayments, emailLog: initialEmailLog, pushLog: initialPushLog, smsLog: initialSmsLog, announcements: initialAnnouncements, apiKeys: initialApiKeys, manualPaymentDetails: initialManualPaymentDetails, templates: initialTemplates, leaseEndReminderDays: '90,60,30', auditLog: initialAuditLog, landingPageConfig: INITIAL_LANDING_PAGE_CONFIG, platformConfig: initialPlatformConfig
 };
 
 const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (user: User | Tenant) => void }> = ({ isOpen, onClose, onLogin }) => {
@@ -289,19 +294,11 @@ const App = () => {
                 ownerUser.roleId = 'role_platform_owner';
             }
             
-            // Fix for any users missing subscription info if loading old data
-            loadedState.users = loadedState.users.map((u: User) => {
-                if(u.roleId === 'role_super_admin' && !u.subscriptionPlan) {
-                    return {
-                        ...u,
-                        subscriptionPlan: 'Professional',
-                        subscriptionStatus: 'Active',
-                        subscriptionExpiry: getFutureDate(30)
-                    };
-                }
-                return u;
-            });
-
+            // Backfill platformConfig
+            if(!loadedState.platformConfig) {
+                loadedState.platformConfig = initialPlatformConfig;
+            }
+            
             return { ...initialData, ...loadedState };
         } catch (error) {
             console.error("Error loading state from local storage:", error);
@@ -329,6 +326,7 @@ const App = () => {
     const [templates, setTemplates] = useState<NotificationTemplate[]>(() => loadState().templates);
     const [leaseEndReminderDays, setLeaseEndReminderDays] = useState(() => loadState().leaseEndReminderDays);
     const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => loadState().landingPageConfig);
+    const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(() => loadState().platformConfig);
     
     const [currentUser, setCurrentUser] = useState<User | Tenant | null>(null);
     const [activePage, setActivePage] = useState('dashboard');
@@ -339,14 +337,14 @@ const App = () => {
 
     useEffect(() => {
         const stateToSave = {
-            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig
+            departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (error) {
             console.error("Error saving state to local storage:", error);
         }
-    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig]);
+    }, [departments, roles, users, agents, properties, tenants, payments, maintenance, notifications, commissionPayments, emailLog, pushLog, smsLog, announcements, apiKeys, manualPaymentDetails, templates, leaseEndReminderDays, auditLog, landingPageConfig, platformConfig]);
 
 
     const addAuditLog = (action: string, details: string, targetId?: string) => {
@@ -460,6 +458,34 @@ const App = () => {
         window.location.hash = '';
     };
 
+    // --- Business Signup Handler ---
+    const handleBusinessSignup = (name: string, email: string, pass: string, planId: string) => {
+        const superAdminRoleId = roles.find(r => r.name === 'Super Admin')?.id;
+        const plan = landingPageConfig.pricing.plans.find(p => p.id === planId);
+        
+        if (!superAdminRoleId || !plan) return;
+
+        const trialDays = platformConfig.defaultTrialDurationDays;
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + trialDays);
+
+        const newUser: User = {
+            id: `user-${Date.now()}`,
+            name: name,
+            username: email,
+            password: pass,
+            roleId: superAdminRoleId,
+            status: UserStatus.Active,
+            subscriptionPlan: plan.name,
+            subscriptionPlanId: plan.id,
+            subscriptionStatus: 'Trial',
+            subscriptionExpiry: expiry.toISOString().split('T')[0]
+        };
+
+        setUsers(prev => [...prev, newUser]);
+        handleLogin(newUser);
+    };
+
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
     
     const onPrintReceipt = (payment: Payment) => {
@@ -512,6 +538,12 @@ const App = () => {
         setUsers(prev => prev.filter(u => u.id !== userId));
     }
 
+    const handleAddStaffUser = (user: User, pass?: string) => {
+        const newUser = { ...user, password: pass || 'password123', status: UserStatus.Active };
+        setUsers(prev => [...prev, newUser]);
+        addAuditLog('CREATED_USER', `Added platform staff: ${user.username}`, newUser.id);
+    };
+
     const markNotificationAsRead = (id: string) => {
         setReadNotificationIds(prev => new Set(prev).add(id));
     };
@@ -524,6 +556,11 @@ const App = () => {
     const handleLandingPageConfigSave = (newConfig: LandingPageConfig) => {
         setLandingPageConfig(newConfig);
         addAuditLog('UPDATED_LANDING_PAGE', 'Platform Owner updated landing page configuration.');
+    };
+
+    const handlePlatformConfigSave = (newConfig: PlatformConfig) => {
+        setPlatformConfig(newConfig);
+        addAuditLog('UPDATED_PLATFORM_CONFIG', 'Platform Owner updated system configuration.');
     };
 
     useEffect(() => {
@@ -545,7 +582,7 @@ const App = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [currentUser, userHasPermission]);
 
-    // Cron Job Simulation: Checks every minute for Subscription Expiry & Rent Due
+    // Cron Job Simulation
     useEffect(() => {
         if (!isStaff) return;
 
@@ -553,14 +590,14 @@ const App = () => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 1. Subscription Expiry Check (For Platform Owner / Automated System)
-            // We iterate through users to check subscription status
+            // 1. Subscription Expiry Check
             setUsers(prevUsers => prevUsers.map(u => {
-                if (u.subscriptionStatus === 'Active' && u.subscriptionExpiry) {
-                    const expiryDate = new Date(u.subscriptionExpiry);
-                    if (today > expiryDate) {
-                        // Subscription expired
-                        return { ...u, subscriptionStatus: 'Expired' };
+                if (u.subscriptionStatus === 'Active' || u.subscriptionStatus === 'Trial') {
+                    if (u.subscriptionExpiry) {
+                        const expiryDate = new Date(u.subscriptionExpiry);
+                        if (today > expiryDate) {
+                            return { ...u, subscriptionStatus: 'Expired' };
+                        }
                     }
                 }
                 return u;
@@ -614,7 +651,11 @@ const App = () => {
     if (!currentUser) {
         return (
             <>
-                <LandingPage onLoginClick={() => setIsLoginModalOpen(true)} config={landingPageConfig} />
+                <LandingPage 
+                    onLoginClick={() => setIsLoginModalOpen(true)} 
+                    onSignup={handleBusinessSignup}
+                    config={landingPageConfig} 
+                />
                 <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
             </>
         );
@@ -651,7 +692,18 @@ const App = () => {
         }
 
         switch(pageToRender) {
-          case 'platform-dashboard': return <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />;
+          case 'platform-dashboard': 
+            return <PlatformDashboard 
+                users={users} 
+                roles={roles} 
+                landingPageConfig={landingPageConfig} 
+                platformConfig={platformConfig}
+                onSaveLandingPageConfig={handleLandingPageConfigSave} 
+                onSavePlatformConfig={handlePlatformConfigSave}
+                onUpdateUser={handleUpdateUser} 
+                onDeleteUser={handleDeleteUser} 
+                onAddStaffUser={handleAddStaffUser}
+            />;
           case 'dashboard': return <Dashboard {...visibleData} currentUser={staffUser!} />;
           case 'properties': return <Properties {...visibleData} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} addAuditLog={addAuditLog} />;
           case 'tenants': return <Tenants {...visibleData} templates={templates} setTenants={setTenants} setPayments={setPayments} setProperties={setProperties} currentUser={staffUser!} userHasPermission={userHasPermission} onPrintReceipt={onPrintReceipt} onSendSms={onSendSms} addAuditLog={addAuditLog} />;
@@ -665,7 +717,7 @@ const App = () => {
           case 'pushlog': return <PushNotificationLog pushLog={pushLog} />;
           case 'smslog': return <SmsLog smsLog={smsLog} />;
           case 'auditlog': return <AuditLog auditLog={auditLog} />;
-          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
+          default: return userHasPermission(Permission.VIEW_PLATFORM_DASHBOARD) ? <PlatformDashboard users={users} roles={roles} landingPageConfig={landingPageConfig} platformConfig={platformConfig} onSaveLandingPageConfig={handleLandingPageConfigSave} onSavePlatformConfig={handlePlatformConfigSave} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddStaffUser={handleAddStaffUser} /> : <Dashboard {...visibleData} currentUser={staffUser!} />;
         }
     };
 

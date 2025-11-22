@@ -1,22 +1,45 @@
 
 import React, { useState } from 'react';
 import { Logo } from '../constants';
-import { LandingPageConfig } from '../types';
+import { LandingPageConfig, LandingPagePricingPlan } from '../types';
 import Modal from '../components/Modal';
 
 interface LandingPageProps {
   onLoginClick: () => void;
+  onSignup: (businessName: string, email: string, password: string, planId: string) => void;
   config: LandingPageConfig;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup, config }) => {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | 'refund' | null>(null);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  
+  // Signup Form State
+  const [businessName, setBusinessName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleStartTrial = (planId?: string) => {
+      // Default to the first plan if none selected (e.g. from Hero CTA)
+      const plan = planId || config.pricing.plans[0].id;
+      setSelectedPlanId(plan);
+      setIsSignupModalOpen(true);
+  };
+
+  const handleSignupSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if(businessName && email && password && selectedPlanId) {
+          onSignup(businessName, email, password, selectedPlanId);
+          setIsSignupModalOpen(false);
+      }
   };
 
   return (
@@ -64,7 +87,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
-              onClick={onLoginClick}
+              onClick={() => handleStartTrial()}
               className="bg-white text-black px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform duration-200"
             >
               {config.hero.ctaText}
@@ -202,8 +225,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
                                 </li>
                             ))}
                         </ul>
-                        <button onClick={onLoginClick} className={`w-full py-3 rounded-lg font-bold transition-colors ${plan.highlighted ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
-                            Choose Plan
+                        <button onClick={() => handleStartTrial(plan.id)} className={`w-full py-3 rounded-lg font-bold transition-colors ${plan.highlighted ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
+                            Start Free Trial
                         </button>
                     </div>
                 ))}
@@ -317,6 +340,40 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, config }) => {
               <p className="mt-2 md:mt-0">Developed by <span className="text-indigo-500 font-semibold">Jadan Technologies</span></p>
           </div>
       </footer>
+
+      {/* Signup Modal */}
+      <Modal isOpen={isSignupModalOpen} onClose={() => setIsSignupModalOpen(false)} title="Start Your Free Trial">
+          <form onSubmit={handleSignupSubmit} className="space-y-4 text-gray-300">
+              <div>
+                  <label className="block text-sm font-medium mb-1">Business Name</label>
+                  <input type="text" required value={businessName} onChange={e => setBusinessName(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="My Estate Management Co." />
+              </div>
+              <div>
+                  <label className="block text-sm font-medium mb-1">Email Address (Username)</label>
+                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="admin@company.com" />
+              </div>
+              <div>
+                  <label className="block text-sm font-medium mb-1">Create Password</label>
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white" placeholder="••••••••" />
+              </div>
+              <div>
+                  <label className="block text-sm font-medium mb-1">Selected Plan</label>
+                  <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} className="w-full bg-[#1f2937] p-2 rounded border border-gray-700 focus:border-indigo-500 outline-none text-white">
+                      {config.pricing.plans.map(p => (
+                          <option key={p.id} value={p.id}>{p.name} - {p.price}{p.period}</option>
+                      ))}
+                  </select>
+              </div>
+              <div className="pt-4">
+                  <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-all">
+                      Create Account & Start Trial
+                  </button>
+                  <p className="text-xs text-center mt-4 text-gray-500">
+                      By signing up, you agree to our Terms of Service and Privacy Policy.
+                  </p>
+              </div>
+          </form>
+      </Modal>
 
       {/* Legal Modals */}
       <Modal isOpen={!!activeLegalModal} onClose={() => setActiveLegalModal(null)} title={activeLegalModal === 'privacy' ? 'Privacy Policy' : activeLegalModal === 'terms' ? 'Terms of Service' : 'Refund Policy'}>
