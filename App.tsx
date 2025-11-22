@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -121,7 +123,7 @@ const initialAgents: Agent[] = [
 ];
 
 const initialProperties: Property[] = [
-  { id: 'prop1', name: 'Luxury Villa', unitNumber: 'Unit 1A', location: 'Lekki Phase 1', departmentId: 'dept_res', rentAmount: 5000000, depositAmount: 1000000, owner: 'Mr. A', description: 'A beautiful villa.', status: PropertyStatus.Occupied, agentId: 'agent1', images: [], documents: ['tenancy_agreement.pdf'], notes: 'Needs repaint.' },
+  { id: 'prop1', name: 'Luxury Villa', unitNumber: 'Unit 1A', location: 'Lekki Phase 1', departmentId: 'dept_res', rentAmount: 5000000, depositAmount: 1000000, owner: 'Mr. A', description: 'A beautiful villa.', status: PropertyStatus.Occupied, agentId: 'agent1', images: [], documents: [{ name: 'tenancy_agreement.pdf', url: '#' }], notes: 'Needs repaint.' },
   { id: 'prop2', name: 'Ocean View Apt', unitNumber: 'Apt 2B', location: 'Victoria Island', departmentId: 'dept_res', rentAmount: 3500000, depositAmount: 700000, owner: 'Mrs. B', description: 'Cozy apartment.', status: PropertyStatus.Vacant, agentId: 'agent1', images: [], documents: [], notes: '' },
   { id: 'prop3', name: 'Corporate Tower', unitNumber: 'Floor 10', location: 'Ikoyi', departmentId: 'dept_off', rentAmount: 15000000, depositAmount: 3000000, owner: 'Big Corp', description: 'Grade A office space.', status: PropertyStatus.Occupied, agentId: 'agent2', images: [], documents: [], notes: '' },
 ];

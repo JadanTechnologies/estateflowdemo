@@ -1,7 +1,8 @@
 
 
+
 import React, { useState, useMemo } from 'react';
-import { Property, Agent, Department, PropertyStatus, User, Tenant, Permission, Role, AuditLogEntry } from '../types';
+import { Property, Agent, Department, PropertyStatus, User, Tenant, Permission, Role, AuditLogEntry, PropertyDocument } from '../types';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -17,6 +18,7 @@ const PropertyForm: React.FC<{
         ...property
     });
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
+    const [documentFiles, setDocumentFiles] = useState<FileList | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -33,10 +35,23 @@ const PropertyForm: React.FC<{
         }
     };
     
+    const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setDocumentFiles(e.target.files);
+        }
+    };
+    
     const handleRemoveImage = (indexToRemove: number) => {
         setFormData(prev => ({
             ...prev,
             images: prev.images?.filter((_, index) => index !== indexToRemove)
+        }));
+    };
+
+    const handleRemoveDocument = (indexToRemove: number) => {
+        setFormData(prev => ({
+            ...prev,
+            documents: prev.documents?.filter((_, index) => index !== indexToRemove)
         }));
     };
 
@@ -57,6 +72,7 @@ const PropertyForm: React.FC<{
         e.preventDefault();
         if (!validate()) return;
         
+        // Process Images
         const newImageUrls: string[] = [];
         if (imageFiles && imageFiles.length > 0) {
             const promises = Array.from(imageFiles).map((file: File) => {
@@ -77,9 +93,31 @@ const PropertyForm: React.FC<{
             }
         }
         
-        const updatedImages = [...(formData.images || []), ...newImageUrls];
+        // Process Documents
+        const newDocuments: PropertyDocument[] = [];
+        if (documentFiles && documentFiles.length > 0) {
+            const promises = Array.from(documentFiles).map((file: File) => {
+                return new Promise<PropertyDocument>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve({ name: file.name, url: reader.result as string });
+                    reader.onerror = error => reject(error);
+                });
+            });
+            try {
+                const docs = await Promise.all(promises);
+                newDocuments.push(...docs);
+            } catch (error) {
+                console.error("Error converting documents to base64", error);
+                alert("There was an error uploading documents. Please try again.");
+                return;
+            }
+        }
         
-        onSave({ id: property?.id || Date.now().toString(), ...formData, images: updatedImages } as Property);
+        const updatedImages = [...(formData.images || []), ...newImageUrls];
+        const updatedDocuments = [...(formData.documents || []), ...newDocuments];
+        
+        onSave({ id: property?.id || Date.now().toString(), ...formData, images: updatedImages, documents: updatedDocuments } as Property);
     };
 
     return (
@@ -123,6 +161,7 @@ const PropertyForm: React.FC<{
             </div>
             <textarea name="notes" value={formData.notes || ''} onChange={handleChange} placeholder="Internal Notes" className="w-full bg-secondary p-2 rounded border border-border h-24"></textarea>
             
+            {/* Images Upload */}
             <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">Property Images</label>
                 <input
@@ -135,34 +174,57 @@ const PropertyForm: React.FC<{
             </div>
 
             {formData.images && formData.images.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-medium text-text-secondary mb-2">Current Images</h4>
-                    <div className="flex flex-wrap gap-2 p-2 bg-secondary rounded">
-                        {formData.images.map((img, index) => (
-                            <div key={index} className="relative">
-                                <img src={img} alt={`Property image ${index + 1}`} className="w-24 h-24 rounded-lg object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(index)}
-                                    className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full p-0.5 w-5 h-5 flex items-center justify-center text-xs backdrop-blur-sm"
-                                    title="Remove image"
-                                >
-                                    &times;
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                <div className="flex flex-wrap gap-2 p-2 bg-secondary rounded">
+                    {formData.images.map((img, index) => (
+                        <div key={index} className="relative">
+                            <img src={img} alt={`Property image ${index + 1}`} className="w-24 h-24 rounded-lg object-cover" />
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveImage(index)}
+                                className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full p-0.5 w-5 h-5 flex items-center justify-center text-xs backdrop-blur-sm"
+                                title="Remove image"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                    ))}
                 </div>
             )}
 
-            {imageFiles && imageFiles.length > 0 && (
+            {/* Documents Upload */}
+            <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Documents (Deeds, Permits, etc.)</label>
+                <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    onChange={handleDocumentChange}
+                    className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"
+                />
+            </div>
+
+            {formData.documents && formData.documents.length > 0 && (
                 <div>
-                    <h4 className="text-sm font-medium text-text-secondary mb-2 mt-2">New Images to Upload</h4>
-                    <div className="flex flex-wrap gap-2 p-2 bg-secondary rounded">
-                        {Array.from(imageFiles).map((file: File, index) => (
-                            <img key={index} src={URL.createObjectURL(file)} alt={`New image ${index + 1}`} className="w-24 h-24 rounded-lg object-cover" />
+                    <h4 className="text-sm font-medium text-text-secondary mb-2">Attached Documents</h4>
+                    <ul className="space-y-2 p-2 bg-secondary rounded">
+                        {formData.documents.map((doc, index) => (
+                            <li key={index} className="flex items-center justify-between bg-background p-2 rounded text-sm">
+                                <div className="flex items-center gap-2 truncate">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span>{doc.name}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveDocument(index)}
+                                    className="text-red-400 hover:text-red-300 text-xs font-semibold ml-2"
+                                >
+                                    Remove
+                                </button>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </div>
             )}
 
@@ -260,9 +322,23 @@ const PropertyDetailModal: React.FC<{
             
             <div>
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Documents</h3>
-                 {property.documents.length > 0 ? (
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                        {property.documents.map((doc, index) => <li key={index}><a href="#" className="text-blue-400 hover:underline">{doc}</a></li>)}
+                 {property.documents && property.documents.length > 0 ? (
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {property.documents.map((doc, index) => (
+                            <li key={index} className="bg-secondary p-2 rounded border border-border/50 hover:border-primary/50 transition-colors">
+                                <a href={doc.url} download={doc.name} className="flex items-center gap-3 group">
+                                    <div className="p-2 bg-primary/10 rounded text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-sm font-medium truncate text-text-primary group-hover:text-primary transition-colors">{doc.name}</p>
+                                        <p className="text-xs text-text-secondary">Click to download</p>
+                                    </div>
+                                </a>
+                            </li>
+                        ))}
                     </ul>
                  ) : <p className="text-text-secondary italic text-sm">No documents uploaded.</p>}
             </div>

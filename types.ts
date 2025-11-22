@@ -100,6 +100,11 @@ export interface Agent {
   commissionRate?: number; // Commission percentage
 }
 
+export interface PropertyDocument {
+  name: string;
+  url: string;
+}
+
 export interface Property {
   id:string;
   name: string;
@@ -113,7 +118,7 @@ export interface Property {
   status: PropertyStatus;
   agentId: string;
   images: string[];
-  documents: string[];
+  documents: PropertyDocument[];
   notes: string;
 }
 
