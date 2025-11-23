@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry } from '../types';
 import Modal from '../components/Modal';
@@ -771,21 +770,23 @@ const Tenants: React.FC<{
             onClose={() => setIsHistoryModalOpen(false)}
             onPrintReceipt={onPrintReceipt}
         />
-    </Modal>
-    <ConfirmationModal
+      </Modal>
+
+      <ConfirmationModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleDeleteTenant}
-        title="Confirm Tenant Deletion"
-        message={`Are you sure you want to delete ${tenantToDelete?.fullName}? This will also mark their property as vacant.`}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this tenant? This action cannot be undone."
       />
-    <SmsModal 
+      
+      <SmsModal
         isOpen={isSmsModalOpen}
         onClose={() => setIsSmsModalOpen(false)}
         tenant={selectedTenantForSms}
         templates={templates}
         onSend={onSendSms}
-    />
+      />
     </div>
   );
 };

@@ -32,17 +32,21 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
     };
 
     useEffect(() => {
-        initializeCanvas();
-        
-        const handleResize = () => {
-             // Reset canvas on resize to maintain aspect ratio and sharpness
-             // Note: This clears the canvas, which is standard behavior for simple resizing unless we persist paths
-             initializeCanvas();
-             setHasDrawn(false);
-        };
+        const container = containerRef.current;
+        if (!container) return;
 
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        // Use ResizeObserver for robust responsiveness to both window resize and sidebar toggles
+        const resizeObserver = new ResizeObserver(() => {
+            initializeCanvas();
+            // Reset state on resize as canvas is cleared
+            setHasDrawn(false);
+        });
+
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
     }, []);
 
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {

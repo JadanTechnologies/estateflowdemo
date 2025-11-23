@@ -76,7 +76,7 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
             else {
                 const selectedProp = properties.find(p => p.id === formData.propertyId);
                 if (selectedProp && selectedProp.status !== PropertyStatus.Vacant) {
-                    newErrors.propertyId = `Property ${selectedProp.name} is not vacant.`;
+                    newErrors.propertyId = `Property "${selectedProp.name}" is currently ${selectedProp.status}. Please select a vacant property.`;
                 }
             }
 
