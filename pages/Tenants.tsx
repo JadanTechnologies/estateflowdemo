@@ -77,14 +77,17 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
         if (!formData.guarantor?.nin?.trim()) newErrors.guarantornin = "Guarantor NIN is required.";
         else if (!ninRegex.test(formData.guarantor.nin)) newErrors.guarantornin = "Guarantor NIN must be 11 digits.";
 
-        if (!formData.propertyId) newErrors.propertyId = "A property must be assigned.";
-        
-        // Property Validation: Ensure property is vacant OR is the tenant's current property
-        const selectedProperty = properties.find(p => p.id === formData.propertyId);
-        if (selectedProperty) {
-            const isCurrentProperty = tenant?.propertyId === selectedProperty.id;
-            if (selectedProperty.status !== PropertyStatus.Vacant && !isCurrentProperty) {
-                newErrors.propertyId = `Property "${selectedProperty.name}" is currently ${selectedProperty.status}. Please select a vacant property.`;
+        if (!formData.propertyId) {
+            newErrors.propertyId = "A property must be assigned.";
+        } else {
+            // Strict Property Status Validation
+            const selectedProperty = properties.find(p => p.id === formData.propertyId);
+            if (selectedProperty) {
+                const isCurrentProperty = tenant?.propertyId === selectedProperty.id;
+                // Logic: If it's not the current tenant's property, and it's NOT vacant, it's invalid.
+                if (!isCurrentProperty && selectedProperty.status !== PropertyStatus.Vacant) {
+                    newErrors.propertyId = `Property "${selectedProperty.name}" is currently ${selectedProperty.status}. Please select a vacant property.`;
+                }
             }
         }
 
@@ -188,9 +191,9 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
                      <div className="md:col-span-2">
                         <select name="propertyId" value={formData.propertyId} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.propertyId ? 'border-red-500' : 'border-border'}`} required>
                             <option value="">Assign Property</option>
-                            {assignableProperties.map(p => 
-                                <option key={p.id} value={p.id}>
-                                    {p.name} - ({p.status})
+                            {properties.map(p => 
+                                <option key={p.id} value={p.id} disabled={p.status !== PropertyStatus.Vacant && p.id !== tenant?.propertyId}>
+                                    {p.name} - {p.status === PropertyStatus.Vacant || p.id === tenant?.propertyId ? '(Available)' : `(${p.status})`}
                                 </option>
                             )}
                         </select>

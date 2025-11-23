@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Tenant, Property, PropertyStatus, Payment, PaymentType, PaymentStatus, PaymentMethod } from '../types';
 import { ICONS } from '../constants';
@@ -72,9 +71,11 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
         }
 
         if (step === 3) {
-            if (!formData.propertyId) newErrors.propertyId = "Property selection is required.";
-            else {
+            if (!formData.propertyId) {
+                newErrors.propertyId = "Property selection is required.";
+            } else {
                 const selectedProp = properties.find(p => p.id === formData.propertyId);
+                // Strict Check: New tenants MUST be assigned to vacant properties
                 if (selectedProp && selectedProp.status !== PropertyStatus.Vacant) {
                     newErrors.propertyId = `Property "${selectedProp.name}" is currently ${selectedProp.status}. Please select a vacant property.`;
                 }
@@ -235,8 +236,10 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
                             <label className="block text-xs text-text-secondary mb-1">Assign Property *</label>
                             <select name="propertyId" value={formData.propertyId} onChange={handleTenantChange} className={`w-full bg-secondary p-2 rounded border ${errors.propertyId ? 'border-red-500' : 'border-border'}`}>
                                 <option value="">Select a Vacant Property</option>
-                                {assignableProperties.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} - ₦{p.rentAmount.toLocaleString()}</option>
+                                {properties.map(p => (
+                                    <option key={p.id} value={p.id} disabled={p.status !== PropertyStatus.Vacant}>
+                                        {p.name} - ₦{p.rentAmount.toLocaleString()} {p.status !== PropertyStatus.Vacant ? `(${p.status})` : ''}
+                                    </option>
                                 ))}
                             </select>
                             {errors.propertyId && <p className="text-red-400 text-xs">{errors.propertyId}</p>}

@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 
 interface SignaturePadProps {
@@ -121,7 +120,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave }) => {
                 onTouchStart={startDrawing}
                 onTouchMove={draw}
                 onTouchEnd={stopDrawing}
-                className="bg-secondary border border-border rounded-md block touch-none w-full" // touch-none prevents scrolling
+                className="bg-secondary border border-border rounded-md block touch-none w-full" // touch-none prevents scrolling on mobile
                 style={{ height: '200px' }}
             />
             <div className="flex justify-end space-x-2 mt-2">
