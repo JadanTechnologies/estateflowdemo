@@ -5,6 +5,18 @@ export enum PropertyStatus {
   UnderMaintenance = 'Under Maintenance',
 }
 
+export enum PropertyType {
+  Standalone = 'Standalone',
+  Estate = 'Estate',
+  Plaza = 'Plaza',
+}
+
+export enum UnitType {
+  House = 'House',
+  Shop = 'Shop',
+  Office = 'Office',
+}
+
 export interface Department {
   id: string;
   name: string;
@@ -110,6 +122,16 @@ export interface PropertyDocument {
   url: string;
 }
 
+// Tenant information for Shop units (captured during property creation)
+export interface ShopTenantInfo {
+  tenantName: string;
+  tenantPhone: string;
+  tenantEmail: string;
+  leaseStartDate: string;
+  leaseEndDate: string;
+  rentDueDate: string;
+}
+
 export interface Property {
   id:string;
   name: string;
@@ -125,6 +147,12 @@ export interface Property {
   images: string[];
   documents: PropertyDocument[];
   notes: string;
+  
+  // New hierarchical property fields
+  propertyType?: PropertyType; // Standalone, Estate, or Plaza
+  unitType?: UnitType; // House, Shop, Office (for units within Estate/Plaza)
+  parentPropertyId?: string; // ID of the Estate or Plaza this unit belongs to
+  shopTenantInfo?: ShopTenantInfo; // Tenant info for Shops (captured during creation)
 }
 
 export interface Guarantor {

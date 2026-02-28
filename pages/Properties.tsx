@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Property, Agent, Department, PropertyStatus, User, Tenant, Permission, Role, AuditLogEntry, PropertyDocument } from '../types';
+import { Property, Agent, Department, PropertyStatus, User, Tenant, Permission, Role, AuditLogEntry, PropertyDocument, PropertyType, UnitType, ShopTenantInfo } from '../types';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -8,16 +8,36 @@ const PropertyForm: React.FC<{
     property: Partial<Property> | null;
     agents: Agent[];
     departments: Department[];
+    properties: Property[]; // For selecting parent Estate/Plaza
     onSave: (property: Property) => void;
     onClose: () => void;
-}> = ({ property, agents, departments, onSave, onClose }) => {
+}> = ({ property, agents, departments, properties, onSave, onClose }) => {
     const [formData, setFormData] = useState<Partial<Property>>({
         name: '', unitNumber: '', location: '', departmentId: '', rentAmount: 0, depositAmount: 0, owner: '', status: PropertyStatus.Vacant, agentId: '', notes: '', images: [], documents: [],
+        propertyType: PropertyType.Standalone,
         ...property
     });
+    
+    // State for managing units under Estate/Plaza
+    const [units, setUnits] = useState<Partial<Property>[]>([]);
+    const [showAddUnit, setShowAddUnit] = useState(false);
+    const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+    const [unitFormData, setUnitFormData] = useState<Partial<Property>>({
+        name: '', unitNumber: '', rentAmount: 0, depositAmount: 0, status: PropertyStatus.Vacant, agentId: '', notes: ''
+    });
+    const [showTenantInfo, setShowTenantInfo] = useState(false);
+    const [tenantInfo, setTenantInfo] = useState<ShopTenantInfo>({
+        tenantName: '', tenantPhone: '', tenantEmail: '', leaseStartDate: '', leaseEndDate: '', rentDueDate: '1'
+    });
+    
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
     const [documentFiles, setDocumentFiles] = useState<FileList | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Get estates and plazas for parent selection
+    const estatesAndPlazas = properties.filter(p => 
+        p.propertyType === PropertyType.Estate || p.propertyType === PropertyType.Plaza
+    );
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -27,6 +47,37 @@ const PropertyForm: React.FC<{
         }
     };
 
+    const handlePropertyTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value as PropertyType;
+        setFormData(prev => ({ 
+            ...prev, 
+            propertyType: value,
+            // Reset unit type when changing property type
+            unitType: undefined,
+            parentPropertyId: undefined
+        }));
+    };
+
+    const handleUnitTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value as UnitType;
+        setFormData(prev => ({ ...prev, unitType: value }));
+        // Show tenant info form when Shop is selected
+        setShowTenantInfo(value === UnitType.Shop);
+    };
+
+    const handleUnitChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setUnitFormData(prev => ({ 
+            ...prev, 
+            [name]: ['rentAmount', 'depositAmount'].includes(name) ? Number(value) : value 
+        }));
+    };
+
+    const handleTenantInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setTenantInfo(prev => ({ ...prev, [name]: value }));
+    };
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const files = Array.from(e.target.files);
@@ -34,7 +85,7 @@ const PropertyForm: React.FC<{
 
             if (nonImageFiles.length > 0) {
                 alert("Only image files are allowed. Please select valid images (e.g., JPG, PNG).");
-                e.target.value = ''; // Reset file input
+                e.target.value = '';
                 setImageFiles(null);
                 return;
             }
@@ -62,14 +113,63 @@ const PropertyForm: React.FC<{
         }));
     };
 
+    const addUnit = () => {
+        if (!unitFormData.name?.trim() || !unitFormData.unitNumber?.trim()) {
+            alert("Unit name and number are required.");
+            return;
+        }
+        
+        const newUnit: Partial<Property> = {
+            ...unitFormData,
+            id: editingUnitIndex !== null ? units[editingUnitIndex].id : Date.now().toString(),
+            status: unitFormData.status || PropertyStatus.Vacant,
+            // Add tenant info if it's a shop
+            shopTenantInfo: formData.unitType === UnitType.Shop ? tenantInfo : undefined
+        };
+        
+        if (editingUnitIndex !== null) {
+            const updatedUnits = [...units];
+            updatedUnits[editingUnitIndex] = newUnit;
+            setUnits(updatedUnits);
+            setEditingUnitIndex(null);
+        } else {
+            setUnits([...units, newUnit]);
+        }
+        
+        // Reset unit form
+        setUnitFormData({
+            name: '', unitNumber: '', rentAmount: 0, depositAmount: 0, status: PropertyStatus.Vacant, agentId: '', notes: ''
+        });
+        setShowAddUnit(false);
+        setShowTenantInfo(false);
+        setTenantInfo({
+            tenantName: '', tenantPhone: '', tenantEmail: '', leaseStartDate: '', leaseEndDate: '', rentDueDate: '1'
+        });
+    };
+
+    const editUnit = (index: number) => {
+        const unit = units[index];
+        setUnitFormData(unit);
+        setEditingUnitIndex(index);
+        if (unit.shopTenantInfo) {
+            setTenantInfo(unit.shopTenantInfo);
+            setShowTenantInfo(true);
+        }
+        setShowAddUnit(true);
+    };
+
+    const deleteUnit = (index: number) => {
+        setUnits(units.filter((_, i) => i !== index));
+    };
+
     const validate = () => {
         const newErrors: Record<string, string> = {};
         if (!formData.name?.trim()) newErrors.name = "Property name is required.";
         if (!formData.location?.trim()) newErrors.location = "Location is required.";
         if (!formData.departmentId) newErrors.departmentId = "Department is required.";
-        if ((formData.rentAmount ?? 0) <= 0) newErrors.rentAmount = "Rent amount must be a positive number.";
+        if ((formData.rentAmount ?? 0) <= 0 && !formData.parentPropertyId) newErrors.rentAmount = "Rent amount must be a positive number.";
         if ((formData.depositAmount ?? 0) < 0) newErrors.depositAmount = "Deposit amount cannot be negative.";
-        if (!formData.agentId) newErrors.agentId = "An agent must be assigned.";
+        if (!formData.agentId && !formData.parentPropertyId) newErrors.agentId = "An agent must be assigned.";
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -124,63 +224,365 @@ const PropertyForm: React.FC<{
         const updatedImages = [...(formData.images || []), ...newImageUrls];
         const updatedDocuments = [...(formData.documents || []), ...newDocuments];
         
-        onSave({ id: property?.id || Date.now().toString(), ...formData, images: updatedImages, documents: updatedDocuments } as Property);
+        // Save main property
+        const mainProperty: Property = {
+            id: property?.id || Date.now().toString(),
+            ...formData,
+            images: updatedImages,
+            documents: updatedDocuments
+        } as Property;
+        
+        onSave(mainProperty);
+        
+        // Save units if this is an Estate or Plaza
+        if ((formData.propertyType === PropertyType.Estate || formData.propertyType === PropertyType.Plaza) && units.length > 0) {
+            // Units will be saved through a callback - we need to handle this differently
+            // For now, we'll save them as separate properties with parentPropertyId
+            units.forEach((unit, index) => {
+                const unitProperty: Property = {
+                    id: unit.id || `${mainProperty.id}-unit-${index + 1}`,
+                    name: unit.name || '',
+                    unitNumber: unit.unitNumber || '',
+                    location: mainProperty.location,
+                    departmentId: mainProperty.departmentId,
+                    rentAmount: unit.rentAmount || 0,
+                    depositAmount: unit.depositAmount || 0,
+                    owner: mainProperty.owner,
+                    description: mainProperty.description,
+                    status: unit.status || PropertyStatus.Vacant,
+                    agentId: unit.agentId || '',
+                    images: [],
+                    documents: [],
+                    notes: unit.notes || '',
+                    propertyType: formData.propertyType,
+                    unitType: unit.unitType,
+                    parentPropertyId: mainProperty.id,
+                    shopTenantInfo: unit.shopTenantInfo
+                } as Property;
+                onSave(unitProperty);
+            });
+        }
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <input name="name" value={formData.name || ''} onChange={handleChange} placeholder="Property Name" className={`w-full bg-secondary p-2 rounded border ${errors.name ? 'border-red-500' : 'border-border'}`} required />
-                    {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+            {/* Property Type Selection */}
+            <div className="bg-secondary p-4 rounded-lg border border-border">
+                <h3 className="text-lg font-semibold mb-3">Property Type</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label className={`flex items-center justify-center p-3 rounded border cursor-pointer transition-colors ${
+                        formData.propertyType === PropertyType.Standalone 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-border hover:border-primary/50'
+                    }`}>
+                        <input 
+                            type="radio" 
+                            name="propertyType" 
+                            value={PropertyType.Standalone}
+                            checked={formData.propertyType === PropertyType.Standalone}
+                            onChange={handlePropertyTypeChange}
+                            className="mr-2"
+                        />
+                        <span className="font-medium">Standalone Property</span>
+                    </label>
+                    <label className={`flex items-center justify-center p-3 rounded border cursor-pointer transition-colors ${
+                        formData.propertyType === PropertyType.Estate 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-border hover:border-primary/50'
+                    }`}>
+                        <input 
+                            type="radio" 
+                            name="propertyType" 
+                            value={PropertyType.Estate}
+                            checked={formData.propertyType === PropertyType.Estate}
+                            onChange={handlePropertyTypeChange}
+                            className="mr-2"
+                        />
+                        <span className="font-medium">Estate (with Houses)</span>
+                    </label>
+                    <label className={`flex items-center justify-center p-3 rounded border cursor-pointer transition-colors ${
+                        formData.propertyType === PropertyType.Plaza 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-border hover:border-primary/50'
+                    }`}>
+                        <input 
+                            type="radio" 
+                            name="propertyType" 
+                            value={PropertyType.Plaza}
+                            checked={formData.propertyType === PropertyType.Plaza}
+                            onChange={handlePropertyTypeChange}
+                            className="mr-2"
+                        />
+                        <span className="font-medium">Plaza (with Shops/Offices)</span>
+                    </label>
                 </div>
-                <input name="unitNumber" value={formData.unitNumber || ''} onChange={handleChange} placeholder="Unit Number (e.g., Apt 101)" className="w-full bg-secondary p-2 rounded border border-border" />
-                <div>
-                    <input name="location" value={formData.location || ''} onChange={handleChange} placeholder="Location" className={`w-full bg-secondary p-2 rounded border ${errors.location ? 'border-red-500' : 'border-border'}`} required />
-                    {errors.location && <p className="text-red-400 text-xs mt-1">{errors.location}</p>}
-                </div>
-                <div>
-                    <select name="departmentId" value={formData.departmentId || ''} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.departmentId ? 'border-red-500' : 'border-border'}`} required>
-                        <option value="">Select Department</option>
-                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                    {errors.departmentId && <p className="text-red-400 text-xs mt-1">{errors.departmentId}</p>}
-                </div>
-                <div>
-                    <input type="number" name="rentAmount" value={formData.rentAmount || 0} onChange={handleChange} placeholder="Rent Amount" className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} required />
-                    {errors.rentAmount && <p className="text-red-400 text-xs mt-1">{errors.rentAmount}</p>}
-                </div>
-                <div>
-                    <input type="number" name="depositAmount" value={formData.depositAmount || 0} onChange={handleChange} placeholder="Deposit Amount" className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} />
-                    {errors.depositAmount && <p className="text-red-400 text-xs mt-1">{errors.depositAmount}</p>}
-                </div>
-                <input name="owner" value={formData.owner || ''} onChange={handleChange} placeholder="Owner" className="w-full bg-secondary p-2 rounded border border-border" />
-                <select name="status" value={formData.status || PropertyStatus.Vacant} onChange={handleChange} className="w-full bg-secondary p-2 rounded border border-border">
-                    {Object.values(PropertyStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <div>
-                    <select name="agentId" value={formData.agentId || ''} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.agentId ? 'border-red-500' : 'border-border'}`} required>
-                        <option value="">Assign Agent</option>
-                        {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                    {errors.agentId && <p className="text-red-400 text-xs mt-1">{errors.agentId}</p>}
-                </div>
-            </div>
-            <textarea name="notes" value={formData.notes || ''} onChange={handleChange} placeholder="Internal Notes" className="w-full bg-secondary p-2 rounded border border-border h-24"></textarea>
-            
-            {/* Images Upload */}
-            <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Property Images</label>
-                <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"
-                />
             </div>
 
-            {formData.images && formData.images.length > 0 && (
+            {/* Parent Property Selection (for units) */}
+            {formData.parentPropertyId && (
+                <div className="bg-blue-500/10 p-4 rounded-lg border border-blue-500/30">
+                    <h3 className="text-md font-semibold mb-3 text-blue-400">Unit Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">Unit Type</label>
+                            <select 
+                                name="unitType" 
+                                value={formData.unitType || ''} 
+                                onChange={handleUnitTypeChange}
+                                className="w-full bg-secondary p-2 rounded border border-border"
+                                required
+                            >
+                                <option value="">Select Unit Type</option>
+                                {formData.propertyType === PropertyType.Estate && (
+                                    <option value={UnitType.House}>{UnitType.House}</option>
+                                )}
+                                {(formData.propertyType === PropertyType.Plaza) && (
+                                    <>
+                                        <option value={UnitType.Shop}>{UnitType.Shop}</option>
+                                        <option value={UnitType.Office}>{UnitType.Office}</option>
+                                    </>
+                                )}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">Unit Number</label>
+                            <input 
+                                name="unitNumber" 
+                                value={formData.unitNumber || ''} 
+                                onChange={handleChange}
+                                placeholder="e.g., Shop 1, Office A"
+                                className="w-full bg-secondary p-2 rounded border border-border"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Property Form (for Estate/Plaza or Standalone) */}
+            {(!formData.parentPropertyId) && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <input name="name" value={formData.name || ''} onChange={handleChange} placeholder={formData.propertyType === PropertyType.Estate ? "Estate Name" : formData.propertyType === PropertyType.Plaza ? "Plaza Name" : "Property Name"} className={`w-full bg-secondary p-2 rounded border ${errors.name ? 'border-red-500' : 'border-border'}`} required />
+                            {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+                        </div>
+                        <div>
+                            <input name="location" value={formData.location || ''} onChange={handleChange} placeholder="Location" className={`w-full bg-secondary p-2 rounded border ${errors.location ? 'border-red-500' : 'border-border'}`} required />
+                            {errors.location && <p className="text-red-400 text-xs mt-1">{errors.location}</p>}
+                        </div>
+                        <div>
+                            <select name="departmentId" value={formData.departmentId || ''} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.departmentId ? 'border-red-500' : 'border-border'}`} required>
+                                <option value="">Select Department</option>
+                                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                            {errors.departmentId && <p className="text-red-400 text-xs mt-1">{errors.departmentId}</p>}
+                        </div>
+                        <div>
+                            <input type="number" name="rentAmount" value={formData.rentAmount || 0} onChange={handleChange} placeholder="Rent Amount" className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} required />
+                            {errors.rentAmount && <p className="text-red-400 text-xs mt-1">{errors.rentAmount}</p>}
+                        </div>
+                        <div>
+                            <input type="number" name="depositAmount" value={formData.depositAmount || 0} onChange={handleChange} placeholder="Deposit Amount" className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} />
+                            {errors.depositAmount && <p className="text-red-400 text-xs mt-1">{errors.depositAmount}</p>}
+                        </div>
+                        <input name="owner" value={formData.owner || ''} onChange={handleChange} placeholder="Owner" className="w-full bg-secondary p-2 rounded border border-border" />
+                        <select name="status" value={formData.status || PropertyStatus.Vacant} onChange={handleChange} className="w-full bg-secondary p-2 rounded border border-border">
+                            {Object.values(PropertyStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <div>
+                            <select name="agentId" value={formData.agentId || ''} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.agentId ? 'border-red-500' : 'border-border'}`} required>
+                                <option value="">Assign Agent</option>
+                                {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                            {errors.agentId && <p className="text-red-400 text-xs mt-1">{errors.agentId}</p>}
+                        </div>
+                    </div>
+                    <textarea name="notes" value={formData.notes || ''} onChange={handleChange} placeholder="Internal Notes" className="w-full bg-secondary p-2 rounded border border-border h-24"></textarea>
+                </>
+            )}
+
+            {/* Add Units Section (for Estate/Plaza) */}
+            {(formData.propertyType === PropertyType.Estate || formData.propertyType === PropertyType.Plaza) && !formData.parentPropertyId && (
+                <div className="bg-secondary p-4 rounded-lg border border-border">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">
+                            {formData.propertyType === PropertyType.Estate ? 'Houses' : 'Shops & Offices'}
+                        </h3>
+                        <button 
+                            type="button" 
+                            onClick={() => setShowAddUnit(true)}
+                            className="bg-primary hover:bg-primary-hover text-white font-bold py-1 px-3 rounded text-sm"
+                        >
+                            + Add Unit
+                        </button>
+                    </div>
+
+                    {units.length > 0 && (
+                        <div className="mb-4 overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-background">
+                                    <tr>
+                                        <th className="p-2">Unit Name</th>
+                                        <th className="p-2">Unit Number</th>
+                                        <th className="p-2">Type</th>
+                                        <th className="p-2">Rent</th>
+                                        <th className="p-2">Agent</th>
+                                        <th className="p-2">Tenant</th>
+                                        <th className="p-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {units.map((unit, index) => (
+                                        <tr key={index} className="border-b border-border/50">
+                                            <td className="p-2">{unit.name}</td>
+                                            <td className="p-2">{unit.unitNumber}</td>
+                                            <td className="p-2">{unit.unitType}</td>
+                                            <td className="p-2">₦{(unit.rentAmount || 0).toLocaleString()}</td>
+                                            <td className="p-2">{agents.find(a => a.id === unit.agentId)?.name || 'N/A'}</td>
+                                            <td className="p-2">{unit.shopTenantInfo?.tenantName || '-'}</td>
+                                            <td className="p-2">
+                                                <button type="button" onClick={() => editUnit(index)} className="text-blue-400 hover:text-blue-300 mr-2">Edit</button>
+                                                <button type="button" onClick={() => deleteUnit(index)} className="text-red-400 hover:text-red-300">Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {units.length === 0 && !showAddUnit && (
+                        <p className="text-text-secondary italic text-sm">No units added yet. Click "Add Unit" to add houses/shops/offices.</p>
+                    )}
+
+                    {/* Add/Edit Unit Form */}
+                    {showAddUnit && (
+                        <div className="mt-4 p-4 bg-background rounded border border-border">
+                            <h4 className="font-semibold mb-3">{editingUnitIndex !== null ? 'Edit Unit' : 'Add New Unit'}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Unit Name *</label>
+                                    <input name="name" value={unitFormData.name || ''} onChange={handleUnitChange} placeholder="e.g., House 1, Shop A" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Unit Number *</label>
+                                    <input name="unitNumber" value={unitFormData.unitNumber || ''} onChange={handleUnitChange} placeholder="e.g., 001, A1" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Unit Type *</label>
+                                    <select name="unitType" value={unitFormData.unitType || ''} onChange={(e) => {
+                                        handleUnitChange(e);
+                                        setShowTenantInfo(e.target.value === UnitType.Shop);
+                                    }} className="w-full bg-secondary p-2 rounded border border-border text-sm">
+                                        <option value="">Select Type</option>
+                                        {formData.propertyType === PropertyType.Estate && (
+                                            <option value={UnitType.House}>{UnitType.House}</option>
+                                        )}
+                                        {formData.propertyType === PropertyType.Plaza && (
+                                            <>
+                                                <option value={UnitType.Shop}>{UnitType.Shop}</option>
+                                                <option value={UnitType.Office}>{UnitType.Office}</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Rent Amount *</label>
+                                    <input type="number" name="rentAmount" value={unitFormData.rentAmount || 0} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Deposit Amount</label>
+                                    <input type="number" name="depositAmount" value={unitFormData.depositAmount || 0} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-text-secondary mb-1">Assign Agent *</label>
+                                    <select name="agentId" value={unitFormData.agentId || ''} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm">
+                                        <option value="">Select Agent</option>
+                                        {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs text-text-secondary mb-1">Status</label>
+                                    <select name="status" value={unitFormData.status || PropertyStatus.Vacant} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm">
+                                        {Object.values(PropertyStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Tenant Information (only for Shops) */}
+                            {showTenantInfo && (
+                                <div className="mt-3 p-3 bg-blue-500/10 rounded border border-blue-500/30">
+                                    <h5 className="font-medium text-blue-400 mb-2">Tenant Information (for Shop)</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Tenant Name</label>
+                                            <input name="tenantName" value={tenantInfo.tenantName || ''} onChange={handleTenantInfoChange} placeholder="Tenant Full Name" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Tenant Phone</label>
+                                            <input name="tenantPhone" value={tenantInfo.tenantPhone || ''} onChange={handleTenantInfoChange} placeholder="Phone Number" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Tenant Email</label>
+                                            <input name="tenantEmail" value={tenantInfo.tenantEmail || ''} onChange={handleTenantInfoChange} placeholder="Email Address" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Lease Start Date</label>
+                                            <input type="date" name="leaseStartDate" value={tenantInfo.leaseStartDate || ''} onChange={handleTenantInfoChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Lease End Date</label>
+                                            <input type="date" name="leaseEndDate" value={tenantInfo.leaseEndDate || ''} onChange={handleTenantInfoChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-text-secondary mb-1">Rent Due Date (Day of Month)</label>
+                                            <input type="number" name="rentDueDate" value={tenantInfo.rentDueDate || '1'} onChange={handleTenantInfoChange} min="1" max="28" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-3 flex justify-end space-x-2">
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        setShowAddUnit(false);
+                                        setEditingUnitIndex(null);
+                                        setShowTenantInfo(false);
+                                        setTenantInfo({ tenantName: '', tenantPhone: '', tenantEmail: '', leaseStartDate: '', leaseEndDate: '', rentDueDate: '1' });
+                                    }} 
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={addUnit}
+                                    className="bg-primary hover:bg-primary-hover text-white font-bold py-1 px-3 rounded text-sm"
+                                >
+                                    {editingUnitIndex !== null ? 'Update Unit' : 'Add Unit'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Images Upload */}
+            {!formData.parentPropertyId && (
+                <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Property Images</label>
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"
+                    />
+                </div>
+            )}
+
+            {formData.images && formData.images.length > 0 && !formData.parentPropertyId && (
                 <div className="flex flex-wrap gap-2 p-2 bg-secondary rounded">
                     {formData.images.map((img, index) => (
                         <div key={index} className="relative">
@@ -199,18 +601,20 @@ const PropertyForm: React.FC<{
             )}
 
             {/* Documents Upload */}
-            <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Documents (Deeds, Permits, etc.)</label>
-                <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                    onChange={handleDocumentChange}
-                    className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"
-                />
-            </div>
+            {!formData.parentPropertyId && (
+                <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Documents (Deeds, Permits, etc.)</label>
+                    <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                        onChange={handleDocumentChange}
+                        className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover"
+                    />
+                </div>
+            )}
 
-            {formData.documents && formData.documents.length > 0 && (
+            {formData.documents && formData.documents.length > 0 && !formData.parentPropertyId && (
                 <div>
                     <h4 className="text-sm font-medium text-text-secondary mb-2">Attached Documents</h4>
                     <ul className="space-y-2 p-2 bg-secondary rounded">
@@ -237,7 +641,9 @@ const PropertyForm: React.FC<{
 
             <div className="flex justify-end space-x-2">
                 <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">Save Property</button>
+                <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded">
+                    {formData.parentPropertyId ? 'Save Unit' : 'Save Property'}
+                </button>
             </div>
         </form>
     );
@@ -248,10 +654,14 @@ const PropertyDetailModal: React.FC<{
     agentName: string;
     departmentName: string;
     tenants: Tenant[];
+    properties: Property[]; // For finding parent/child properties
     onClose: () => void;
-}> = ({ property, agentName, departmentName, tenants, onClose }) => {
+}> = ({ property, agentName, departmentName, tenants, properties, onClose }) => {
     const propertyTenants = tenants.filter(t => t.propertyId === property.id);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    
+    // Find child units (if this is an Estate or Plaza)
+    const childUnits = properties.filter(p => p.parentPropertyId === property.id);
 
     const goToNextImage = () => {
         setCurrentImageIndex(prevIndex => (prevIndex + 1) % property.images.length);
@@ -267,6 +677,18 @@ const PropertyDetailModal: React.FC<{
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Property Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div><strong>Name:</strong> {property.name}</div>
+                    <div><strong>Type:</strong> 
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            property.propertyType === PropertyType.Estate ? 'bg-purple-500/20 text-purple-400' :
+                            property.propertyType === PropertyType.Plaza ? 'bg-blue-500/20 text-blue-400' :
+                            property.unitType ? 'bg-green-500/20 text-green-400' :
+                            'bg-gray-500/20 text-gray-400'
+                        }`}>
+                            {property.propertyType === PropertyType.Estate ? 'Estate' : 
+                             property.propertyType === PropertyType.Plaza ? 'Plaza' : 
+                             property.unitType ? property.unitType : 'Standalone Property'}
+                        </span>
+                    </div>
                     <div><strong>Unit:</strong> {property.unitNumber || 'N/A'}</div>
                     <div><strong>Location:</strong> {property.location}</div>
                     <div><strong>Department:</strong> {departmentName}</div>
@@ -278,6 +700,47 @@ const PropertyDetailModal: React.FC<{
                 </div>
                 {property.notes && <div className="mt-4"><strong>Notes:</strong> <p className="text-text-secondary italic bg-secondary p-2 rounded">{property.notes}</p></div>}
             </div>
+
+            {/* Child Units Section (for Estate/Plaza) */}
+            {childUnits.length > 0 && (
+                <div>
+                    <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Units ({childUnits.length})</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-secondary">
+                                <tr>
+                                    <th className="p-2">Unit Name</th>
+                                    <th className="p-2">Unit #</th>
+                                    <th className="p-2">Type</th>
+                                    <th className="p-2">Rent</th>
+                                    <th className="p-2">Status</th>
+                                    <th className="p-2">Tenant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {childUnits.map(unit => (
+                                    <tr key={unit.id} className="border-b border-border/50">
+                                        <td className="p-2">{unit.name}</td>
+                                        <td className="p-2">{unit.unitNumber}</td>
+                                        <td className="p-2">{unit.unitType}</td>
+                                        <td className="p-2">₦{(unit.rentAmount || 0).toLocaleString()}</td>
+                                        <td className="p-2">
+                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                                unit.status === PropertyStatus.Occupied ? 'bg-red-500/20 text-red-400' :
+                                                unit.status === PropertyStatus.Vacant ? 'bg-green-500/20 text-green-400' :
+                                                'bg-yellow-500/20 text-yellow-400'
+                                            }`}>
+                                                {unit.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-2">{unit.shopTenantInfo?.tenantName || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             <div>
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Image Gallery</h3>
@@ -404,6 +867,8 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [agentFilter, setAgentFilter] = useState('All');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('All');
+  const [showOnlyParents, setShowOnlyParents] = useState(false);
 
   const userRole = useMemo(() => roles.find(r => r.id === currentUser.roleId), [roles, currentUser.roleId]);
   const canManageGlobally = userHasPermission(Permission.MANAGE_PROPERTIES);
@@ -415,10 +880,18 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                             property.location.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'All' || property.status === statusFilter;
       const matchesAgent = agentFilter === 'All' || property.agentId === agentFilter;
+      const matchesPropertyType = propertyTypeFilter === 'All' || 
+        (propertyTypeFilter === 'Estate' && property.propertyType === PropertyType.Estate) ||
+        (propertyTypeFilter === 'Plaza' && property.propertyType === PropertyType.Plaza) ||
+        (propertyTypeFilter === 'Standalone' && (!property.propertyType || property.propertyType === PropertyType.Standalone));
+      
+      // Filter for parent properties only (Estates and Plazas)
+      const isParentProperty = property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza;
+      const matchesParentFilter = !showOnlyParents || (showOnlyParents && isParentProperty);
 
-      return matchesSearch && matchesStatus && matchesAgent;
+      return matchesSearch && matchesStatus && matchesAgent && matchesPropertyType && matchesParentFilter;
     });
-  }, [properties, searchQuery, statusFilter, agentFilter]);
+  }, [properties, searchQuery, statusFilter, agentFilter, propertyTypeFilter, showOnlyParents]);
 
   const handleSave = (property: Property) => {
     if (selectedProperty) {
@@ -486,7 +959,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <input
           type="text"
           placeholder="Search by name or location..."
@@ -514,6 +987,28 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             <option key={agent.id} value={agent.id}>{agent.name}</option>
           ))}
         </select>
+        <select
+          value={propertyTypeFilter}
+          onChange={(e) => setPropertyTypeFilter(e.target.value)}
+          className="bg-secondary p-2 rounded border border-border focus:ring-2 focus:ring-primary focus:outline-none"
+        >
+          <option value="All">All Types</option>
+          <option value="Standalone">Standalone</option>
+          <option value="Estate">Estate</option>
+          <option value="Plaza">Plaza</option>
+        </select>
+      </div>
+      
+      <div className="mb-4 flex items-center">
+        <label className="flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showOnlyParents}
+            onChange={(e) => setShowOnlyParents(e.target.checked)}
+            className="mr-2 w-4 h-4 rounded border-border text-primary focus:ring-primary"
+          />
+          <span className="text-sm text-text-secondary">Show only Estates & Plazas</span>
+        </label>
       </div>
       
       <div className="bg-card rounded-lg shadow-lg overflow-x-auto">
@@ -521,6 +1016,8 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
           <thead className="border-b border-border">
             <tr>
               <th className="p-4">Name</th>
+              <th className="p-4">Type</th>
+              <th className="p-4">Unit #</th>
               <th className="p-4">Location</th>
               <th className="p-4">Rent</th>
               <th className="p-4">Status</th>
@@ -531,7 +1028,25 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
           <tbody>
             {filteredProperties.map(prop => (
               <tr key={prop.id} className="border-b border-border/50 hover:bg-secondary">
-                <td className="p-4">{prop.name}</td>
+                <td className="p-4">
+                  {prop.parentPropertyId ? (
+                    <span className="text-blue-400">{prop.name}</span>
+                  ) : (
+                    <span className="font-medium">{prop.name}</span>
+                  )}
+                </td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    prop.propertyType === PropertyType.Estate ? 'bg-purple-500/20 text-purple-400' :
+                    prop.propertyType === PropertyType.Plaza ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {prop.propertyType === PropertyType.Estate ? 'Estate' : 
+                     prop.propertyType === PropertyType.Plaza ? 'Plaza' : 
+                     prop.unitType ? prop.unitType : 'Standalone'}
+                  </span>
+                </td>
+                <td className="p-4">{prop.unitNumber || '-'}</td>
                 <td className="p-4">{prop.location}</td>
                 <td className="p-4">₦{(prop.rentAmount || 0).toLocaleString()}</td>
                 <td className="p-4">
@@ -553,7 +1068,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             ))}
             {filteredProperties.length === 0 && (
                 <tr>
-                    <td colSpan={6} className="text-center p-6 text-text-secondary">No properties found matching your filters.</td>
+                    <td colSpan={8} className="text-center p-6 text-text-secondary">No properties found matching your filters.</td>
                 </tr>
             )}
           </tbody>
@@ -565,6 +1080,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             property={selectedProperty} 
             agents={agents}
             departments={departments}
+            properties={properties}
             onSave={handleSave} 
             onClose={() => setIsFormModalOpen(false)} 
         />
@@ -577,6 +1093,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                 agentName={agents.find(a => a.id === selectedProperty.agentId)?.name || 'N/A'}
                 departmentName={departments.find(d => d.id === selectedProperty.departmentId)?.name || 'N/A'}
                 tenants={tenants}
+                properties={properties}
                 onClose={() => setIsDetailModalOpen(false)}
             />
         )}
