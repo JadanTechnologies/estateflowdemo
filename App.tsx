@@ -23,6 +23,7 @@ import PlatformDashboard from './pages/PlatformDashboard';
 import { NAV_LINKS, Logo, INITIAL_LANDING_PAGE_CONFIG } from './constants';
 import { sendSms } from './services/notificationService';
 import { NOTIFICATION_SOUND_BASE64 } from './components/NotificationSound';
+import ToastNotification from './components/ToastNotification';
 
 import { 
   User, Agent, Property, Tenant, Payment, Maintenance, Role, Permission,
@@ -388,6 +389,7 @@ const App = () => {
     const [paymentForReceipt, setPaymentForReceipt] = useState<Payment | null>(null);
     const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [latestToastNotification, setLatestToastNotification] = useState<Notification | null>(null);
 
     // Branding Setters Wrapper
     const setBranding = useMemo(() => ({
@@ -501,6 +503,7 @@ const App = () => {
         };
         setNotifications(prev => {
             playNotificationSound(); // Play sound on new notification
+            setLatestToastNotification(newNotif); // Show toast popup
             return [newNotif, ...prev]
         });
     };
@@ -734,6 +737,7 @@ const App = () => {
                         };
                         setNotifications(prev => {
                             playNotificationSound();
+                            setLatestToastNotification(newNotif); // Show popup
                             return [newNotif, ...prev];
                         });
                     }
@@ -860,6 +864,12 @@ const App = () => {
 
     return (
         <>
+            {latestToastNotification && (
+                <ToastNotification 
+                    notification={latestToastNotification} 
+                    onClose={() => setLatestToastNotification(null)} 
+                />
+            )}
             <div className={`flex h-screen bg-background text-text-primary overflow-hidden`}>
                 {isStaff && <Sidebar currentUser={currentUser as User} activePage={activePage} setActivePage={setActivePage} isSidebarOpen={isSidebarOpen} userHasPermission={userHasPermission} customLogo={branding.logoUrl} customTitle={branding.platformName} />}
                 

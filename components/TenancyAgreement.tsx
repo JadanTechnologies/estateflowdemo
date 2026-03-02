@@ -2,6 +2,7 @@
 import React from 'react';
 import { Tenant, Property, User } from '../types';
 import SignaturePad from './SignaturePad';
+import { t, Language } from '../services/translations';
 
 // Add this at the top of the file for jsPDF types
 declare global {
@@ -18,12 +19,16 @@ interface TenancyAgreementProps {
     onClose: () => void;
     onSaveTenantSignature?: (signature: string) => void;
     onSaveManagementSignature?: (signature: string) => void;
+    language?: Language;
 }
 
-const TenancyAgreement: React.FC<TenancyAgreementProps> = ({ tenant, property, companyName, currentUser, onClose, onSaveTenantSignature, onSaveManagementSignature }) => {
+const TenancyAgreement: React.FC<TenancyAgreementProps> = ({ tenant, property, companyName, currentUser, onClose, onSaveTenantSignature, onSaveManagementSignature, language = 'en' }) => {
     
     const isCurrentUserTenant = 'roleId' in currentUser ? false : currentUser.id === tenant.id;
     const isCurrentUserManagement = 'roleId' in currentUser;
+    
+    // Translation helper
+    const tr = (key: 'tenancyAgreement' | 'thisAgreement' | 'between' | 'landlord' | 'tenant' | 'property' | 'rentAmount' | 'perAnnum' | 'leaseTerm' | 'from' | 'to' | 'termsAndConditions' | 'tenantSignature' | 'landlordSignature' | 'signedBy' | 'awaitingSignature' | 'clause1' | 'clause2' | 'clause3' | 'clause4' | 'clause5' | 'clause6' | 'clause7' | 'clause8' | 'clause9' | 'clause10' | 'clause11' | 'clause12') => t(key, language);
 
     const handleDownloadPdf = () => {
         // @ts-ignore - jsPDF is loaded from a script tag in index.html

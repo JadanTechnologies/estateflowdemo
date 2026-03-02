@@ -378,11 +378,36 @@ const PropertyForm: React.FC<{
                             {errors.departmentId && <p className="text-red-400 text-xs mt-1">{errors.departmentId}</p>}
                         </div>
                         <div>
-                            <input type="number" name="rentAmount" value={formData.rentAmount || 0} onChange={handleChange} placeholder="Rent Amount" className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} required />
+                            <input 
+                                type="text" 
+                                name="rentAmount" 
+                                value={formData.rentAmount?.toLocaleString() || '0'} 
+                                onChange={(e) => {
+                                    // Remove commas and convert to number
+                                    const value = e.target.value.replace(/,/g, '');
+                                    if (!isNaN(Number(value))) {
+                                        setFormData(prev => ({ ...prev, rentAmount: Number(value) }));
+                                    }
+                                }} 
+                                placeholder="Rent Amount" 
+                                className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} 
+                            />
                             {errors.rentAmount && <p className="text-red-400 text-xs mt-1">{errors.rentAmount}</p>}
                         </div>
                         <div>
-                            <input type="number" name="depositAmount" value={formData.depositAmount || 0} onChange={handleChange} placeholder="Deposit Amount" className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} />
+                            <input 
+                                type="text" 
+                                name="depositAmount" 
+                                value={formData.depositAmount?.toLocaleString() || '0'} 
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/,/g, '');
+                                    if (!isNaN(Number(value))) {
+                                        setFormData(prev => ({ ...prev, depositAmount: Number(value) }));
+                                    }
+                                }} 
+                                placeholder="Deposit Amount" 
+                                className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} 
+                            />
                             {errors.depositAmount && <p className="text-red-400 text-xs mt-1">{errors.depositAmount}</p>}
                         </div>
                         <input name="owner" value={formData.owner || ''} onChange={handleChange} placeholder="Owner" className="w-full bg-secondary p-2 rounded border border-border" />
@@ -488,11 +513,33 @@ const PropertyForm: React.FC<{
                                 </div>
                                 <div>
                                     <label className="block text-xs text-text-secondary mb-1">Rent Amount *</label>
-                                    <input type="number" name="rentAmount" value={unitFormData.rentAmount || 0} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                    <input 
+                                        type="text" 
+                                        name="rentAmount" 
+                                        value={unitFormData.rentAmount?.toLocaleString() || '0'} 
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/,/g, '');
+                                            if (!isNaN(Number(value))) {
+                                                setUnitFormData(prev => ({ ...prev, rentAmount: Number(value) }));
+                                            }
+                                        }} 
+                                        className="w-full bg-secondary p-2 rounded border border-border text-sm" 
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs text-text-secondary mb-1">Deposit Amount</label>
-                                    <input type="number" name="depositAmount" value={unitFormData.depositAmount || 0} onChange={handleUnitChange} className="w-full bg-secondary p-2 rounded border border-border text-sm" />
+                                    <input 
+                                        type="text" 
+                                        name="depositAmount" 
+                                        value={unitFormData.depositAmount?.toLocaleString() || '0'} 
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/,/g, '');
+                                            if (!isNaN(Number(value))) {
+                                                setUnitFormData(prev => ({ ...prev, depositAmount: Number(value) }));
+                                            }
+                                        }} 
+                                        className="w-full bg-secondary p-2 rounded border border-border text-sm" 
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs text-text-secondary mb-1">Assign Agent *</label>
