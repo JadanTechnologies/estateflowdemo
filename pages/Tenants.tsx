@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry } from '../types';
+import { Tenant, Property, PropertyStatus, Payment, PaymentType, User, Permission, Role, Agent, NotificationTemplate, AuditLogEntry, PropertyType, UnitType } from '../types';
 import Modal from '../components/Modal';
 import PaymentForm from '../components/PaymentForm';
 import PaymentHistoryModal from '../components/PaymentHistoryModal';
@@ -36,6 +36,64 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
     // Filter properties to show only Vacant ones OR the one currently assigned to this tenant
     const assignableProperties = useMemo(() => {
         return properties.filter(p => p.status === PropertyStatus.Vacant || p.id === tenant?.propertyId);
+    }, [properties, tenant]);
+
+    // Create hierarchical property list for dropdown
+    const hierarchicalProperties = useMemo(() => {
+        const result: { id: string; label: string; isParent: boolean; status: PropertyStatus }[] = [];
+        
+        // Get standalone properties and units (non-parent properties)
+        const standaloneProperties = properties.filter(p => 
+            (!p.propertyType || p.propertyType === PropertyType.Standalone) && 
+            (p.status === PropertyStatus.Vacant || p.id === tenant?.propertyId)
+        );
+        
+        // Get estates and plazas (parent properties)
+        const estatesAndPlazas = properties.filter(p => 
+            p.propertyType === PropertyType.Estate || p.propertyType === PropertyType.Plaza
+        );
+        
+        // Get all units (houses, shops, offices)
+        const allUnits = properties.filter(p => p.parentPropertyId);
+        
+        // Add standalone properties first
+        standaloneProperties.forEach(p => {
+            result.push({ id: p.id, label: p.name, isParent: false, status: p.status });
+        });
+        
+        // Add estates and their houses
+        estatesAndPlazas.forEach(parent => {
+            const isEstate = parent.propertyType === PropertyType.Estate;
+            const parentLabel = isEstate ? '🏠 ' : '🏢 ';
+            
+            // Find units for this parent
+            const units = allUnits.filter(u => u.parentPropertyId === parent.id && 
+                (u.status === PropertyStatus.Vacant || u.id === tenant?.propertyId));
+            
+            if (units.length > 0) {
+                // Add parent as a disabled option group header
+                result.push({ 
+                    id: parent.id, 
+                    label: parentLabel + parent.name + ` (${units.length} units)`, 
+                    isParent: true, 
+                    status: parent.status 
+                });
+                
+                // Add units under this parent
+                units.forEach(unit => {
+                    const unitTypeIcon = unit.unitType === UnitType.House ? '🏠' : 
+                                        unit.unitType === UnitType.Shop ? '🏪' : '🏢';
+                    result.push({ 
+                        id: unit.id, 
+                        label: '   └─ ' + unitTypeIcon + ' ' + unit.name + ' (' + (unit.unitNumber || '-') + ')', 
+                        isParent: false, 
+                        status: unit.status 
+                    });
+                });
+            }
+        });
+        
+        return result;
     }, [properties, tenant]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, isGuarantor = false) => {
@@ -190,10 +248,10 @@ const TenantForm: React.FC<TenantFormProps> = ({ tenant, properties, tenants, on
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div className="md:col-span-2">
                         <select name="propertyId" value={formData.propertyId} onChange={handleChange} className={`w-full bg-secondary p-2 rounded border ${errors.propertyId ? 'border-red-500' : 'border-border'}`} required>
-                            <option value="">Assign Property</option>
-                            {properties.map(p => 
-                                <option key={p.id} value={p.id} disabled={p.status !== PropertyStatus.Vacant && p.id !== tenant?.propertyId}>
-                                    {p.name} - {p.status === PropertyStatus.Vacant || p.id === tenant?.propertyId ? '(Available)' : `(${p.status})`}
+                            <option value="">Select Property</option>
+                            {hierarchicalProperties.map(p => 
+                                <option key={p.id} value={p.id} disabled={p.isParent}>
+                                    {p.label}
                                 </option>
                             )}
                         </select>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Tenant, Property, PropertyStatus, Payment, PaymentType, PaymentStatus, PaymentMethod } from '../types';
+import { Tenant, Property, PropertyStatus, Payment, PaymentType, PaymentStatus, PaymentMethod, PropertyType, UnitType } from '../types';
 import { ICONS } from '../constants';
 
 interface TenantOnboardingWizardProps {
@@ -40,6 +40,65 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
 
     const assignableProperties = useMemo(() => {
         return properties.filter(p => p.status === PropertyStatus.Vacant);
+    }, [properties]);
+
+    // Create hierarchical property list for dropdown
+    const hierarchicalProperties = useMemo(() => {
+        const result: { id: string; label: string; isParent: boolean; status: PropertyStatus; rentAmount: number }[] = [];
+        
+        // Get standalone properties (non-parent, non-child properties)
+        const standaloneProperties = properties.filter(p => 
+            (!p.propertyType || p.propertyType === PropertyType.Standalone) && 
+            p.status === PropertyStatus.Vacant
+        );
+        
+        // Get estates and plazas (parent properties)
+        const estatesAndPlazas = properties.filter(p => 
+            p.propertyType === PropertyType.Estate || p.propertyType === PropertyType.Plaza
+        );
+        
+        // Get all units (houses, shops, offices)
+        const allUnits = properties.filter(p => p.parentPropertyId);
+        
+        // Add standalone properties first
+        standaloneProperties.forEach(p => {
+            result.push({ id: p.id, label: p.name, isParent: false, status: p.status, rentAmount: p.rentAmount });
+        });
+        
+        // Add estates and their houses
+        estatesAndPlazas.forEach(parent => {
+            const isEstate = parent.propertyType === PropertyType.Estate;
+            const parentLabel = isEstate ? '🏠 ' : '🏢 ';
+            
+            // Find units for this parent
+            const units = allUnits.filter(u => u.parentPropertyId === parent.id && u.status === PropertyStatus.Vacant);
+            
+            if (units.length > 0) {
+                // Add parent as a disabled option group header
+                result.push({ 
+                    id: parent.id, 
+                    label: parentLabel + parent.name + ` (${units.length} units available)`, 
+                    isParent: true, 
+                    status: parent.status,
+                    rentAmount: 0
+                });
+                
+                // Add units under this parent
+                units.forEach(unit => {
+                    const unitTypeIcon = unit.unitType === UnitType.House ? '🏠' : 
+                                        unit.unitType === UnitType.Shop ? '🏪' : '🏢';
+                    result.push({ 
+                        id: unit.id, 
+                        label: '   └─ ' + unitTypeIcon + ' ' + unit.name + ' (' + (unit.unitNumber || '-') + ')', 
+                        isParent: false, 
+                        status: unit.status,
+                        rentAmount: unit.rentAmount
+                    });
+                });
+            }
+        });
+        
+        return result;
     }, [properties]);
 
     const handleTenantChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, isGuarantor = false) => {
@@ -131,7 +190,14 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
     };
 
     const getSelectedPropertyName = () => {
-        return properties.find(p => p.id === formData.propertyId)?.name || 'None Selected';
+        const p = properties.find(p => p.id === formData.propertyId);
+        if (!p) return 'None Selected';
+        // If it's a unit, show the parent name as well
+        if (p.parentPropertyId) {
+            const parent = properties.find(parent => parent.id === p.parentPropertyId);
+            return parent ? `${parent.name} > ${p.name} (${p.unitNumber || '-'})` : `${p.name} (${p.unitNumber || '-'})`;
+        }
+        return p.name;
     };
 
     const getSelectedPropertyPrice = () => {
@@ -236,9 +302,9 @@ const TenantOnboardingWizard: React.FC<TenantOnboardingWizardProps> = ({ propert
                             <label className="block text-xs text-text-secondary mb-1">Assign Property *</label>
                             <select name="propertyId" value={formData.propertyId} onChange={handleTenantChange} className={`w-full bg-secondary p-2 rounded border ${errors.propertyId ? 'border-red-500' : 'border-border'}`}>
                                 <option value="">Select a Vacant Property</option>
-                                {properties.map(p => (
-                                    <option key={p.id} value={p.id} disabled={p.status !== PropertyStatus.Vacant}>
-                                        {p.name} - ₦{p.rentAmount.toLocaleString()} {p.status !== PropertyStatus.Vacant ? `(${p.status})` : ''}
+                                {hierarchicalProperties.map(p => (
+                                    <option key={p.id} value={p.id} disabled={p.isParent}>
+                                        {p.label} {p.isParent ? '' : '- ₦' + p.rentAmount.toLocaleString()}
                                     </option>
                                 ))}
                             </select>
