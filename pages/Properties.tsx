@@ -167,9 +167,11 @@ const PropertyForm: React.FC<{
         if (!formData.name?.trim()) newErrors.name = "Property name is required.";
         if (!formData.location?.trim()) newErrors.location = "Location is required.";
         if (!formData.departmentId) newErrors.departmentId = "Department is required.";
-        if ((formData.rentAmount ?? 0) <= 0 && !formData.parentPropertyId) newErrors.rentAmount = "Rent amount must be a positive number.";
-        if ((formData.depositAmount ?? 0) < 0) newErrors.depositAmount = "Deposit amount cannot be negative.";
-        if (!formData.agentId && !formData.parentPropertyId) newErrors.agentId = "An agent must be assigned.";
+        // Only require rent for Standalone properties - Estates/Plazas get rent from their units
+        if ((formData.rentAmount ?? 0) <= 0 && !formData.parentPropertyId && formData.propertyType === PropertyType.Standalone) newErrors.rentAmount = "Rent amount must be a positive number.";
+        if ((formData.depositAmount ?? 0) < 0 && formData.propertyType === PropertyType.Standalone) newErrors.depositAmount = "Deposit amount cannot be negative.";
+        // Only require agent for Standalone properties
+        if (!formData.agentId && !formData.parentPropertyId && formData.propertyType === PropertyType.Standalone) newErrors.agentId = "An agent must be assigned.";
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -377,39 +379,53 @@ const PropertyForm: React.FC<{
                             </select>
                             {errors.departmentId && <p className="text-red-400 text-xs mt-1">{errors.departmentId}</p>}
                         </div>
-                        <div>
-                            <input 
-                                type="text" 
-                                name="rentAmount" 
-                                value={formData.rentAmount?.toLocaleString() || '0'} 
-                                onChange={(e) => {
-                                    // Remove commas and convert to number
-                                    const value = e.target.value.replace(/,/g, '');
-                                    if (!isNaN(Number(value))) {
-                                        setFormData(prev => ({ ...prev, rentAmount: Number(value) }));
-                                    }
-                                }} 
-                                placeholder="Rent Amount" 
-                                className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} 
-                            />
-                            {errors.rentAmount && <p className="text-red-400 text-xs mt-1">{errors.rentAmount}</p>}
-                        </div>
-                        <div>
-                            <input 
-                                type="text" 
-                                name="depositAmount" 
-                                value={formData.depositAmount?.toLocaleString() || '0'} 
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/,/g, '');
-                                    if (!isNaN(Number(value))) {
-                                        setFormData(prev => ({ ...prev, depositAmount: Number(value) }));
-                                    }
-                                }} 
-                                placeholder="Deposit Amount" 
-                                className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} 
-                            />
-                            {errors.depositAmount && <p className="text-red-400 text-xs mt-1">{errors.depositAmount}</p>}
-                        </div>
+                        {/* Only show rent/deposit for Standalone properties - Estates/Plazas get prices from their units */}
+                        {formData.propertyType === PropertyType.Standalone && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Rent Amount (₦) *</label>
+                                    <input 
+                                        type="text" 
+                                        name="rentAmount" 
+                                        value={formData.rentAmount?.toLocaleString() || '0'} 
+                                        onChange={(e) => {
+                                            // Remove commas and convert to number
+                                            const value = e.target.value.replace(/,/g, '');
+                                            if (!isNaN(Number(value))) {
+                                                setFormData(prev => ({ ...prev, rentAmount: Number(value) }));
+                                            }
+                                        }} 
+                                        placeholder="e.g. 500000 or 500,000" 
+                                        className={`w-full bg-secondary p-2 rounded border ${errors.rentAmount ? 'border-red-500' : 'border-border'}`} 
+                                    />
+                                    <p className="text-xs text-text-secondary mt-1">Enter the yearly rent amount in Naira</p>
+                                    {errors.rentAmount && <p className="text-red-400 text-xs mt-1">{errors.rentAmount}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Deposit Amount (₦)</label>
+                                    <input 
+                                        type="text" 
+                                        name="depositAmount" 
+                                        value={formData.depositAmount?.toLocaleString() || '0'} 
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/,/g, '');
+                                            if (!isNaN(Number(value))) {
+                                                setFormData(prev => ({ ...prev, depositAmount: Number(value) }));
+                                            }
+                                        }} 
+                                        placeholder="e.g. 250000 or 250,000" 
+                                        className={`w-full bg-secondary p-2 rounded border ${errors.depositAmount ? 'border-red-500' : 'border-border'}`} 
+                                    />
+                                    <p className="text-xs text-text-secondary mt-1">Security deposit (usually equal to rent)</p>
+                                    {errors.depositAmount && <p className="text-red-400 text-xs mt-1">{errors.depositAmount}</p>}
+                                </div>
+                            </>
+                        )}
+                        {formData.propertyType !== PropertyType.Standalone && (
+                            <div className="md:col-span-2 bg-blue-500/10 p-3 rounded border border-blue-500/30 text-sm text-blue-400">
+                                <strong>Note:</strong> {formData.propertyType === PropertyType.Estate ? 'Estates' : 'Plazas'} do not have their own rent. You will add houses/shops/offices below with their individual prices.
+                            </div>
+                        )}
                         <input name="owner" value={formData.owner || ''} onChange={handleChange} placeholder="Owner" className="w-full bg-secondary p-2 rounded border border-border" />
                         <select name="status" value={formData.status || PropertyStatus.Vacant} onChange={handleChange} className="w-full bg-secondary p-2 rounded border border-border">
                             {Object.values(PropertyStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -490,7 +506,7 @@ const PropertyForm: React.FC<{
                                     <input name="name" value={unitFormData.name || ''} onChange={handleUnitChange} placeholder="e.g., House 1, Shop A" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-text-secondary mb-1">Unit Number *</label>
+                                    <label className="block text-xs text-text-secondary mb-1">Unit Number/Code *</label>
                                     <input name="unitNumber" value={unitFormData.unitNumber || ''} onChange={handleUnitChange} placeholder="e.g., 001, A1" className="w-full bg-secondary p-2 rounded border border-border text-sm" />
                                 </div>
                                 <div>
@@ -512,7 +528,7 @@ const PropertyForm: React.FC<{
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-text-secondary mb-1">Rent Amount *</label>
+                                    <label className="block text-xs text-text-secondary mb-1">Yearly Rent (₦) *</label>
                                     <input 
                                         type="text" 
                                         name="rentAmount" 
@@ -523,11 +539,12 @@ const PropertyForm: React.FC<{
                                                 setUnitFormData(prev => ({ ...prev, rentAmount: Number(value) }));
                                             }
                                         }} 
+                                        placeholder="e.g. 500000" 
                                         className="w-full bg-secondary p-2 rounded border border-border text-sm" 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-text-secondary mb-1">Deposit Amount</label>
+                                    <label className="block text-xs text-text-secondary mb-1">Deposit (₦)</label>
                                     <input 
                                         type="text" 
                                         name="depositAmount" 
@@ -538,6 +555,7 @@ const PropertyForm: React.FC<{
                                                 setUnitFormData(prev => ({ ...prev, depositAmount: Number(value) }));
                                             }
                                         }} 
+                                        placeholder="e.g. 250000" 
                                         className="w-full bg-secondary p-2 rounded border border-border text-sm" 
                                     />
                                 </div>
@@ -615,8 +633,8 @@ const PropertyForm: React.FC<{
                 </div>
             )}
 
-            {/* Images Upload */}
-            {!formData.parentPropertyId && (
+            {/* Images Upload - For Standalone and Estate/Plaza (but not for units) */}
+            {(!formData.parentPropertyId) && (
                 <div>
                     <label className="block text-sm font-medium text-text-secondary mb-1">Property Images</label>
                     <input
@@ -739,8 +757,16 @@ const PropertyDetailModal: React.FC<{
                     <div><strong>Unit:</strong> {property.unitNumber || 'N/A'}</div>
                     <div><strong>Location:</strong> {property.location}</div>
                     <div><strong>Department:</strong> {departmentName}</div>
-                    <div><strong>Rent:</strong> ₦{(property.rentAmount || 0).toLocaleString()}</div>
-                    <div><strong>Deposit:</strong> ₦{(property.depositAmount || 0).toLocaleString()}</div>
+                    {(property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) ? (
+                        <div className="col-span-2 bg-blue-500/10 p-2 rounded border border-blue-500/30 text-sm">
+                            <strong>Note:</strong> This {property.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'} does not have its own rent. Rent is determined by individual units (houses/shops/offices).
+                        </div>
+                    ) : (
+                        <>
+                            <div><strong>Rent:</strong> ₦{(property.rentAmount || 0).toLocaleString()}</div>
+                            <div><strong>Deposit:</strong> ₦{(property.depositAmount || 0).toLocaleString()}</div>
+                        </>
+                    )}
                     <div><strong>Owner:</strong> {property.owner}</div>
                     <div><strong>Status:</strong> {property.status}</div>
                     <div><strong>Agent:</strong> {agentName}</div>
