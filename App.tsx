@@ -132,9 +132,9 @@ const initialUsers: User[] = [
         subscriptionStatus: 'Active',
         subscriptionExpiry: getFutureDate(30),
         businessProfile: {
-            companyName: 'Admin Estates Ltd',
-            address: '123 Admin Way',
-            phone: '0800-ADMIN',
+            companyName: 'Sokoto Estates Ltd',
+            address: '45 Ahmadu Bello Way, Sokoto, Sokoto State, Nigeria',
+            phone: '080-1234-5678',
             country: 'Nigeria',
             currency: 'NGN'
         }
@@ -145,20 +145,21 @@ const initialUsers: User[] = [
 ];
 
 const initialAgents: Agent[] = [
-  { id: 'agent1', name: 'John Doe', phone: '123-456-7890', email: 'john@estate.com', departmentId: 'dept_res', commissionRate: 5 },
-  { id: 'agent2', name: 'Jane Smith', phone: '098-765-4321', email: 'jane@estate.com', departmentId: 'dept_com', commissionRate: 4.5 },
+  { id: 'agent1', name: 'Aminu Musa', phone: '080-1234-5678', email: 'aminu@estate.com', departmentId: 'dept_res', commissionRate: 5 },
+  { id: 'agent2', name: 'Hassan Ibrahim', phone: '080-2345-6789', email: 'hassan@estate.com', departmentId: 'dept_com', commissionRate: 4.5 },
+  { id: 'agent3', name: 'Shamsu Magazu', phone: '080-3456-7890', email: 'shamsu@estate.com', departmentId: 'dept_res', commissionRate: 5 },
 ];
 
 const initialProperties: Property[] = [
-  { id: 'prop1', name: 'Luxury Villa', unitNumber: 'Unit 1A', location: 'Lekki Phase 1', departmentId: 'dept_res', rentAmount: 5000000, depositAmount: 1000000, owner: 'Mr. A', description: 'A beautiful villa.', status: PropertyStatus.Occupied, agentId: 'agent1', images: [], documents: [{ name: 'tenancy_agreement.pdf', url: '#' }], notes: 'Needs repaint.' },
-  { id: 'prop2', name: 'Ocean View Apt', unitNumber: 'Apt 2B', location: 'Victoria Island', departmentId: 'dept_res', rentAmount: 3500000, depositAmount: 700000, owner: 'Mrs. B', description: 'Cozy apartment.', status: PropertyStatus.Vacant, agentId: 'agent1', images: [], documents: [], notes: '' },
-  { id: 'prop3', name: 'Corporate Tower', unitNumber: 'Floor 10', location: 'Ikoyi', departmentId: 'dept_off', rentAmount: 15000000, depositAmount: 3000000, owner: 'Big Corp', description: 'Grade A office space.', status: PropertyStatus.Occupied, agentId: 'agent2', images: [], documents: [], notes: '' },
+  { id: 'prop1', name: 'Rumfar Gadgeton', unitNumber: 'House 1', location: 'Ahmadu Bello Road, Sokoto', departmentId: 'dept_res', rentAmount: 500000, depositAmount: 100000, owner: 'Alhaji Adamu', description: 'Gidan manoma daya.', status: PropertyStatus.Occupied, agentId: 'agent1', images: [], documents: [{ name: 'tenancy_agreement.pdf', url: '#' }], notes: 'Ina son gyara.' },
+  { id: 'prop2', name: 'Tudun Fulani Flat', unitNumber: 'Flat 2B', location: 'Kwaruwa Road, Sokoto', departmentId: 'dept_res', rentAmount: 350000, depositAmount: 70000, owner: 'Malam Bashir', description: 'Gida mai kyau.', status: PropertyStatus.Vacant, agentId: 'agent1', images: [], documents: [], notes: '' },
+  { id: 'prop3', name: 'Sokoto Business Plaza', unitNumber: 'Floor 1', location: 'Mohammadu Buhari Way, Sokoto', departmentId: 'dept_off', rentAmount: 1500000, depositAmount: 300000, owner: 'Alhaji Umar', description: 'Office space mai kyau.', status: PropertyStatus.Occupied, agentId: 'agent2', images: [], documents: [], notes: '' },
 ];
 
 const initialTenants: Tenant[] = [
-    { id: 'ten1', fullName: 'Alice Williams', phone: '111-222-3333', email: 'alice@mail.com', address: '123 Main St', nin: '12345678901', guarantor: { fullName: 'Bob Brown', phone: '444-555-6666', address: '456 Oak Ave', nin: '09876543210' }, propertyId: 'prop1', leaseStartDate: '2023-01-01', leaseEndDate: getFutureDate(30), rentDueDate: getFutureDate(5), profilePhoto: `https://i.pravatar.cc/150?u=alice`, notes: 'Tenant requested an additional parking spot.', username: 'tenant@estateflow.com', password: 'tenant123' },
-    { id: 'ten2', fullName: 'Charlie Davis', phone: '777-888-9999', email: 'charlie@mail.com', address: '789 Pine Ln', nin: '11223344556', guarantor: { fullName: 'Diana Miller', phone: '000-111-2222', address: '101 Maple Dr', nin: '66554433221' }, propertyId: 'prop3', leaseStartDate: '2023-03-15', leaseEndDate: getFutureDate(60), rentDueDate: getFutureDate(15), profilePhoto: `https://i.pravatar.cc/150?u=charlie`, notes: 'Pays rent on time, but has had noise complaints from neighboring units.', username: 'charlie@tenant.com', password: 'password' },
-    { id: 'ten3', fullName: 'David Lee', phone: '321-654-9870', email: 'david@mail.com', address: '321 Birch Rd', nin: '98765432109', guarantor: { fullName: 'Eva Green', phone: '123-987-6543', address: '654 Cedar St', nin: '01234567890' }, propertyId: 'prop2', leaseStartDate: '2023-08-01', leaseEndDate: getFutureDate(120), rentDueDate: getFutureDate(25), profilePhoto: `https://i.pravatar.cc/150?u=david`, notes: '', username: 'david@tenant.com', password: 'password' },
+    { id: 'ten1', fullName: 'Abdullahi Musa', phone: '080-1111-2222', email: 'abdullahi@mail.com', address: '25 Garba Bako Street, Sokoto', nin: '12345678901', guarantor: { fullName: 'Abubakar Musa', phone: '080-4444-5555', address: '10 Sultan Abubakar Road, Sokoto', nin: '09876543210' }, propertyId: 'prop1', leaseStartDate: '2023-01-01', leaseEndDate: getFutureDate(30), rentDueDate: getFutureDate(5), profilePhoto: `https://i.pravatar.cc/150?u=alice`, notes: 'Tenant na nemi wani allocated parking spot.', username: 'tenant@estateflow.com', password: 'tenant123' },
+    { id: 'ten2', fullName: 'Kabiru Yusuf', phone: '080-7777-8888', email: 'kabiru@mail.com', address: '30 Ibrahim Dabo Street, Sokoto', nin: '11223344556', guarantor: { fullName: 'Haliru Mohammed', phone: '080-0000-1111', address: '15 Aliyu Kofar Road, Sokoto', nin: '66554433221' }, propertyId: 'prop3', leaseStartDate: '2023-03-15', leaseEndDate: getFutureDate(60), rentDueDate: getFutureDate(15), profilePhoto: `https://i.pravatar.cc/150?u=charlie`, notes: 'Yana biya rent lokaci, amma akwai kkararrar hudu daga makwabta.', username: 'charlie@tenant.com', password: 'password' },
+    { id: 'ten3', fullName: 'Salisu Garba', phone: '080-321-654-9870', email: 'salisu@mail.com', address: '18 Shehu Kangiwa Road, Sokoto', nin: '98765432109', guarantor: { fullName: 'Isah Alkali', phone: '080-123-987-6543', address: '22 Kwantuwa Road, Sokoto', nin: '01234567890' }, propertyId: 'prop2', leaseStartDate: '2023-08-01', leaseEndDate: getFutureDate(120), rentDueDate: getFutureDate(25), profilePhoto: `https://i.pravatar.cc/150?u=david`, notes: '', username: 'david@tenant.com', password: 'password' },
 ];
 
 const initialPayments: Payment[] = [
@@ -225,10 +226,10 @@ const initialPlatformConfig: PlatformConfig = {
 
 // Default Branding
 const initialBranding = {
-    platformName: 'EstateFlow',
-    companyEmail: 'contact@estateflow.com',
-    companyPhone: '08012345678, 09087654321',
-    companyAddress: '123 Property Lane, Real Estate City, Lagos',
+    platformName: 'Sokoto EstateFlow',
+    companyEmail: 'contact@sokotoestate.com',
+    companyPhone: '080-1234-5678, 090-8765-4321',
+    companyAddress: '45 Ahmadu Bello Way, Sokoto, Sokoto State, Nigeria',
     currency: 'NGN',
     logoUrl: ''
 };
@@ -303,7 +304,7 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (use
                  <div className="mt-6 text-center">
                      <p className="text-xs text-gray-500 mb-1">Demo Credentials:</p>
                      <p className="text-xs text-gray-400">owner@estateflow.com / owner123 (Platform Owner)</p>
-                     <p className="text-xs text-gray-400">admin@estateflow.com / admin123 (Business Admin)</p>
+                     <p className="text-xs text-gray-400">admin@estateflow.com / admin123 (Business Admin - Sokoto)</p>
                      <p className="text-xs text-gray-400">tenant@estateflow.com / tenant123 (Tenant)</p>
                  </div>
                  <div className="mt-6 border-t border-gray-700 pt-4 text-center">
