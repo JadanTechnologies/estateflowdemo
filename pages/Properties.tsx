@@ -407,6 +407,18 @@ const PropertyForm: React.FC<{
                         )}
                     </div>
 
+                    {/* Info box for Estate/Plaza - explains where to add rent and agent */}
+                    {(formData.propertyType === PropertyType.Estate || formData.propertyType === PropertyType.Plaza) && (
+                        <div className="mt-4 bg-blue-500/10 p-4 rounded-lg border border-blue-500/30">
+                            <h4 className="font-semibold text-blue-400 mb-2">How to set rent and assign agents:</h4>
+                            <p className="text-sm text-text-secondary">
+                                After creating this {formData.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'}, 
+                                click "<strong>Add Unit</strong>" below to add houses/shops/offices. 
+                                Each unit will have its own rent amount and assigned agent.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Rent/Deposit fields only for Standalone properties */}
                     {formData.propertyType === PropertyType.Standalone && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
