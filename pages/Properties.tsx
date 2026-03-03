@@ -135,7 +135,10 @@ const PropertyForm: React.FC<{
         const newUnit: Partial<Property> = {
             ...unitFormData,
             id: editingUnitIndex !== null ? units[editingUnitIndex].id : Date.now().toString(),
-            status: unitFormData.status || PropertyStatus.Vacant,
+            // Auto-set status to Occupied if tenant info is provided (for Shops)
+            status: (unitFormData.unitType === UnitType.Shop && tenantInfo.tenantName) 
+                ? PropertyStatus.Occupied 
+                : (unitFormData.status || PropertyStatus.Vacant),
             // Add tenant info if it's a shop
             shopTenantInfo: unitFormData.unitType === UnitType.Shop ? tenantInfo : undefined
         };
@@ -728,8 +731,11 @@ const PropertyDetailModal: React.FC<{
     tenants: Tenant[];
     properties: Property[]; // For finding parent/child properties
     agents: Agent[]; // For displaying agent names
+    onEditProperty?: (property: Property) => void; // Callback to edit property/units
+    onDeleteUnit?: (unitId: string) => void; // Callback to delete a unit
+    onUpdateUnitStatus?: (unitId: string, status: PropertyStatus) => void; // Callback to update unit status
     onClose: () => void;
-}> = ({ property, agentName, departmentName, tenants, properties, agents, onClose }) => {
+}> = ({ property, agentName, departmentName, tenants, properties, agents, onEditProperty, onDeleteUnit, onUpdateUnitStatus, onClose }) => {
     const propertyTenants = tenants.filter(t => t.propertyId === property.id);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     
@@ -818,6 +824,7 @@ const PropertyDetailModal: React.FC<{
                                         <th className="p-2">Agent</th>
                                         <th className="p-2">Status</th>
                                         <th className="p-2">Tenant</th>
+                                        <th className="p-2">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -851,6 +858,40 @@ const PropertyDetailModal: React.FC<{
                                                     ) : (
                                                         <span className="text-text-secondary">-</span>
                                                     )}
+                                                </td>
+                                                <td className="p-2">
+                                                    {/* Status Dropdown */}
+                                                    <select
+                                                        value={unit.status}
+                                                        onChange={(e) => {
+                                                            if (onUpdateUnitStatus) {
+                                                                onUpdateUnitStatus(unit.id, e.target.value as PropertyStatus);
+                                                            }
+                                                        }}
+                                                        className="bg-secondary p-1 rounded border border-border text-xs"
+                                                    >
+                                                        {Object.values(PropertyStatus).map(s => (
+                                                            <option key={s} value={s}>{s}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="p-2 space-x-1">
+                                                    <button 
+                                                        onClick={() => onEditProperty && onEditProperty(unit)} 
+                                                        className="text-blue-400 hover:text-blue-300 text-xs"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            if (window.confirm('Are you sure you want to delete this unit?')) {
+                                                                onDeleteUnit && onDeleteUnit(unit.id);
+                                                            }
+                                                        }} 
+                                                        className="text-red-400 hover:text-red-300 text-xs"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );
@@ -1225,11 +1266,11 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
     if (units && units.length > 0) {
         // First, remove old units that were removed
         const existingChildUnits = properties.filter((p: Property) => p.parentPropertyId === property.id);
-        const existingUnitIds = new Set(existingChildUnits.map((u: Property) => u.id));
-        const newUnitIds = new Set(units.map((u: Partial<Property>) => u.id || '').filter((id: string) => id));
+        const existingUnitIds = new Set<string>(existingChildUnits.map((u: Property) => u.id));
+        const newUnitIds = new Set<string>(units.map((u: Partial<Property>) => u.id || '').filter((id: string) => id));
         
         // Remove units that are no longer in the list
-        existingUnitIds.forEach(id => {
+        existingUnitIds.forEach((id: string) => {
             if (!newUnitIds.has(id)) {
                 setProperties(prev => prev.filter(p => p.id !== id));
             }
@@ -1317,6 +1358,23 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
   const openDetailModal = (property: Property) => {
     setSelectedProperty(property);
     setIsDetailModalOpen(true);
+  };
+
+  // Handler to update unit status
+  const handleUpdateUnitStatus = (unitId: string, status: PropertyStatus) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id === unitId) {
+        return { ...p, status };
+      }
+      return p;
+    }));
+    addAuditLog('UPDATED_UNIT_STATUS', `Updated unit status to ${status}`, unitId);
+  };
+
+  // Handler to delete a unit
+  const handleDeleteUnit = (unitId: string) => {
+    setProperties(prev => prev.filter(p => p.id !== unitId));
+    addAuditLog('DELETED_UNIT', `Deleted unit`, unitId);
   };
 
   return (
@@ -1540,6 +1598,16 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                 tenants={tenants}
                 properties={properties}
                 agents={agents}
+                onEditProperty={(unit) => {
+                    // When editing a unit, we need to open the form with the parent property
+                    const parentProperty = properties.find(p => p.id === selectedProperty.id);
+                    if (parentProperty) {
+                        setIsDetailModalOpen(false);
+                        openFormModal(parentProperty);
+                    }
+                }}
+                onDeleteUnit={handleDeleteUnit}
+                onUpdateUnitStatus={handleUpdateUnitStatus}
                 onClose={() => setIsDetailModalOpen(false)}
             />
         )}
