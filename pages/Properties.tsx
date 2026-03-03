@@ -1254,18 +1254,22 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
   }, [properties, searchQuery, statusFilter, agentFilter, propertyTypeFilter, showOnlyParents]);
 
   const handleSave = (property: Property, units?: Partial<Property>[]) => {
+    // Generate a consistent ID for new properties
+    const propertyId = property.id || `property-${Date.now()}`;
+    const propertyWithId = { ...property, id: propertyId };
+    
     if (selectedProperty) {
-      setProperties(prev => prev.map(p => p.id === property.id ? property : p));
-      addAuditLog('UPDATED_PROPERTY', `Updated property: ${property.name}`, property.id);
+      setProperties(prev => prev.map(p => p.id === propertyWithId.id ? propertyWithId : p));
+      addAuditLog('UPDATED_PROPERTY', `Updated property: ${propertyWithId.name}`, propertyWithId.id);
     } else {
-      setProperties(prev => [...prev, property]);
-      addAuditLog('CREATED_PROPERTY', `Created property: ${property.name}`, property.id);
+      setProperties(prev => [...prev, propertyWithId]);
+      addAuditLog('CREATED_PROPERTY', `Created property: ${propertyWithId.name}`, propertyWithId.id);
     }
     
     // Save/update units if this is an Estate or Plaza
     if (units && units.length > 0) {
         // First, remove old units that were removed
-        const existingChildUnits = properties.filter((p: Property) => p.parentPropertyId === property.id);
+        const existingChildUnits = properties.filter((p: Property) => p.parentPropertyId === propertyWithId.id);
         const existingUnitIds = new Set<string>(existingChildUnits.map((u: Property) => u.id));
         const newUnitIds = new Set<string>(units.map((u: Partial<Property>) => u.id || '').filter((id: string) => id));
         
@@ -1279,23 +1283,23 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
         // Add or update units
         units.forEach((unit, index) => {
             const unitProperty: Property = {
-                id: unit.id || `${property.id}-unit-${index + 1}`,
+                id: unit.id || `${propertyWithId.id}-unit-${index + 1}-${Date.now()}`,
                 name: unit.name || '',
                 unitNumber: unit.unitNumber || '',
-                location: property.location,
-                departmentId: property.departmentId,
+                location: propertyWithId.location,
+                departmentId: propertyWithId.departmentId,
                 rentAmount: unit.rentAmount || 0,
                 depositAmount: unit.depositAmount || 0,
-                owner: property.owner,
-                description: property.description,
+                owner: propertyWithId.owner,
+                description: propertyWithId.description,
                 status: unit.status || PropertyStatus.Vacant,
                 agentId: unit.agentId || '',
                 images: [],
                 documents: [],
                 notes: unit.notes || '',
-                propertyType: property.propertyType,
+                propertyType: propertyWithId.propertyType,
                 unitType: unit.unitType,
-                parentPropertyId: property.id,
+                parentPropertyId: propertyWithId.id, // CRITICAL: This links unit to parent
                 shopTenantInfo: unit.shopTenantInfo
             } as Property;
             
@@ -1358,7 +1362,9 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
   };
 
   const openDetailModal = (property: Property) => {
-    setSelectedProperty(property);
+    // Get the latest version of the property from state (includes newly added units)
+    const latestProperty = properties.find(p => p.id === property.id) || property;
+    setSelectedProperty(latestProperty);
     setIsDetailModalOpen(true);
   };
 
