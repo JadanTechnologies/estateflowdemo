@@ -822,6 +822,95 @@ const PropertyDetailModal: React.FC<{
                 </div>
             )}
 
+            {/* Comprehensive Tenants Section (for Estate/Plaza - shows all tenants in all units) */}
+            {(property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) && childUnits.length > 0 && (
+                <div>
+                    <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
+                        All Tenants in {property.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'}
+                    </h3>
+                    {(() => {
+                        // Get all units with tenant info (from shopTenantInfo)
+                        const unitsWithTenants = childUnits.filter(unit => unit.shopTenantInfo?.tenantName);
+                        
+                        // Also get tenants from the tenants list that are in any of these units
+                        const unitIds = childUnits.map(u => u.id);
+                        const tenantsInUnits = tenants.filter(t => unitIds.includes(t.propertyId));
+                        
+                        if (unitsWithTenants.length === 0 && tenantsInUnits.length === 0) {
+                            return <p className="text-text-secondary italic">No tenants in this {property.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'} yet.</p>;
+                        }
+                        
+                        return (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-secondary">
+                                        <tr>
+                                            <th className="p-2">Tenant Name</th>
+                                            <th className="p-2">Unit</th>
+                                            <th className="p-2">Unit #</th>
+                                            <th className="p-2">Type</th>
+                                            <th className="p-2">Phone</th>
+                                            <th className="p-2">Email</th>
+                                            <th className="p-2">Lease Start</th>
+                                            <th className="p-2">Lease End</th>
+                                            <th className="p-2">Rent</th>
+                                            <th className="p-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {/* Show tenants from shopTenantInfo */}
+                                        {unitsWithTenants.map(unit => (
+                                            <tr key={unit.id} className="border-b border-border/50">
+                                                <td className="p-2 font-medium text-blue-400">{unit.shopTenantInfo?.tenantName}</td>
+                                                <td className="p-2">{unit.name}</td>
+                                                <td className="p-2">{unit.unitNumber}</td>
+                                                <td className="p-2">{unit.unitType}</td>
+                                                <td className="p-2">{unit.shopTenantInfo?.tenantPhone || '-'}</td>
+                                                <td className="p-2">{unit.shopTenantInfo?.tenantEmail || '-'}</td>
+                                                <td className="p-2">{unit.shopTenantInfo?.leaseStartDate || '-'}</td>
+                                                <td className="p-2">{unit.shopTenantInfo?.leaseEndDate || '-'}</td>
+                                                <td className="p-2">₦{(unit.rentAmount || 0).toLocaleString()}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                                        unit.status === PropertyStatus.Occupied ? 'bg-red-500/20 text-red-400' :
+                                                        unit.status === PropertyStatus.Vacant ? 'bg-green-500/20 text-green-400' :
+                                                        'bg-yellow-500/20 text-yellow-400'
+                                                    }`}>
+                                                        {unit.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {/* Show tenants from tenants list */}
+                                        {tenantsInUnits.map(tenant => {
+                                            const unit = childUnits.find(u => u.id === tenant.propertyId);
+                                            return (
+                                                <tr key={tenant.id} className="border-b border-border/50">
+                                                    <td className="p-2 font-medium text-green-400">{tenant.fullName}</td>
+                                                    <td className="p-2">{unit?.name || 'N/A'}</td>
+                                                    <td className="p-2">{unit?.unitNumber || '-'}</td>
+                                                    <td className="p-2">{unit?.unitType || '-'}</td>
+                                                    <td className="p-2">{tenant.phone || '-'}</td>
+                                                    <td className="p-2">{tenant.email || '-'}</td>
+                                                    <td className="p-2">{tenant.leaseStartDate || '-'}</td>
+                                                    <td className="p-2">{tenant.leaseEndDate || '-'}</td>
+                                                    <td className="p-2">₦{(unit?.rentAmount || 0).toLocaleString()}</td>
+                                                    <td className="p-2">
+                                                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400">
+                                                            Occupied
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+
             <div>
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Image Gallery</h3>
                 {property.images.length > 0 ? (
