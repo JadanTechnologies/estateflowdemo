@@ -733,7 +733,7 @@ const PropertyDetailModal: React.FC<{
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     
     // Find child units (if this is an Estate or Plaza)
-    const childUnits = properties.filter(p => p.parentPropertyId === property.id);
+    const childUnits = properties.filter((p: Property) => p.parentPropertyId === property.id);
 
     const goToNextImage = () => {
         setCurrentImageIndex(prevIndex => (prevIndex + 1) % property.images.length);
@@ -781,8 +781,88 @@ const PropertyDetailModal: React.FC<{
                 {property.notes && <div className="mt-4"><strong>Notes:</strong> <p className="text-text-secondary italic bg-secondary p-2 rounded">{property.notes}</p></div>}
             </div>
 
-            {/* Child Units Section (for Estate/Plaza) */}
-            {childUnits.length > 0 && (
+            {/* Child Units Section (for Estate/Plaza) with Summary */}
+            {(property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) && (
+                <div>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="bg-secondary p-3 rounded-lg border border-border text-center">
+                            <div className="text-2xl font-bold text-white">{childUnits.length}</div>
+                            <div className="text-xs text-text-secondary">Total Units</div>
+                        </div>
+                        <div className="bg-green-500/10 p-3 rounded-lg border border-green-500/30 text-center">
+                            <div className="text-2xl font-bold text-green-400">{childUnits.filter(u => u.status === PropertyStatus.Vacant).length}</div>
+                            <div className="text-xs text-text-secondary">Vacant</div>
+                        </div>
+                        <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/30 text-center">
+                            <div className="text-2xl font-bold text-red-400">{childUnits.filter(u => u.status === PropertyStatus.Occupied).length}</div>
+                            <div className="text-xs text-text-secondary">Occupied</div>
+                        </div>
+                    </div>
+                    
+                    <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
+                        All Units in {property.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'}
+                    </h3>
+                    {childUnits.length === 0 ? (
+                        <p className="text-text-secondary italic">No units added yet.</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-secondary">
+                                    <tr>
+                                        <th className="p-2">Unit Name</th>
+                                        <th className="p-2">Unit #</th>
+                                        <th className="p-2">Type</th>
+                                        <th className="p-2">Rent</th>
+                                        <th className="p-2">Agent</th>
+                                        <th className="p-2">Status</th>
+                                        <th className="p-2">Tenant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {childUnits.map(unit => {
+                                        // Find tenant for this unit
+                                        const tenantInUnit = tenants.find(t => t.propertyId === unit.id);
+                                        const tenantFromShopInfo = unit.shopTenantInfo?.tenantName;
+                                        const hasTenant = tenantInUnit || tenantFromShopInfo;
+                                        
+                                        return (
+                                            <tr key={unit.id} className="border-b border-border/50">
+                                                <td className="p-2 font-medium">{unit.name}</td>
+                                                <td className="p-2">{unit.unitNumber}</td>
+                                                <td className="p-2">{unit.unitType}</td>
+                                                <td className="p-2">₦{(unit.rentAmount || 0).toLocaleString()}</td>
+                                                <td className="p-2">{agents.find(a => a.id === unit.agentId)?.name || 'N/A'}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                                        unit.status === PropertyStatus.Occupied ? 'bg-red-500/20 text-red-400' :
+                                                        unit.status === PropertyStatus.Vacant ? 'bg-green-500/20 text-green-400' :
+                                                        'bg-yellow-500/20 text-yellow-400'
+                                                    }`}>
+                                                        {unit.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2">
+                                                    {tenantInUnit ? (
+                                                        <span className="text-green-400">{tenantInUnit.fullName}</span>
+                                                    ) : tenantFromShopInfo ? (
+                                                        <span className="text-blue-400">{tenantFromShopInfo}</span>
+                                                    ) : (
+                                                        <span className="text-text-secondary">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* For non-Estate/Plaza properties - show basic units if any */}
+            {!(property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) && childUnits.length > 0 && (
                 <div>
                     <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Units ({childUnits.length})</h3>
                     <div className="overflow-x-auto">
@@ -1074,9 +1154,9 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
     // Save/update units if this is an Estate or Plaza
     if (units && units.length > 0) {
         // First, remove old units that were removed
-        const existingChildUnits = properties.filter(p => p.parentPropertyId === property.id);
-        const existingUnitIds = new Set(existingChildUnits.map(u => u.id));
-        const newUnitIds = new Set(units.map(u => u.id || '').filter(id => id));
+        const existingChildUnits = properties.filter((p: Property) => p.parentPropertyId === property.id);
+        const existingUnitIds = new Set(existingChildUnits.map((u: Property) => u.id));
+        const newUnitIds = new Set(units.map((u: Partial<Property>) => u.id || '').filter((id: string) => id));
         
         // Remove units that are no longer in the list
         existingUnitIds.forEach(id => {
