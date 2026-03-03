@@ -9,17 +9,18 @@ const PropertyForm: React.FC<{
     agents: Agent[];
     departments: Department[];
     properties: Property[]; // For selecting parent Estate/Plaza
-    onSave: (property: Property) => void;
+    existingUnits?: Partial<Property>[]; // Existing units when editing Estate/Plaza
+    onSave: (property: Property, units?: Partial<Property>[]) => void;
     onClose: () => void;
-}> = ({ property, agents, departments, properties, onSave, onClose }) => {
+}> = ({ property, agents, departments, properties, existingUnits = [], onSave, onClose }) => {
     const [formData, setFormData] = useState<Partial<Property>>({
         name: '', unitNumber: '', location: '', departmentId: '', rentAmount: 0, depositAmount: 0, owner: '', status: PropertyStatus.Vacant, agentId: '', notes: '', images: [], documents: [],
         propertyType: PropertyType.Standalone,
         ...property
     });
     
-    // State for managing units under Estate/Plaza
-    const [units, setUnits] = useState<Partial<Property>[]>([]);
+    // State for managing units under Estate/Plaza - initialize with existing units if provided
+    const [units, setUnits] = useState<Partial<Property>[]>(existingUnits);
     const [showAddUnit, setShowAddUnit] = useState(false);
     const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
     const [unitFormData, setUnitFormData] = useState<Partial<Property>>({
@@ -249,35 +250,11 @@ const PropertyForm: React.FC<{
             documents: updatedDocuments
         } as Property;
         
-        onSave(mainProperty);
-        
-        // Save units if this is an Estate or Plaza
+        // Pass both the main property and units to onSave
         if ((formData.propertyType === PropertyType.Estate || formData.propertyType === PropertyType.Plaza) && units.length > 0) {
-            // Units will be saved through a callback - we need to handle this differently
-            // For now, we'll save them as separate properties with parentPropertyId
-            units.forEach((unit, index) => {
-                const unitProperty: Property = {
-                    id: unit.id || `${mainProperty.id}-unit-${index + 1}`,
-                    name: unit.name || '',
-                    unitNumber: unit.unitNumber || '',
-                    location: mainProperty.location,
-                    departmentId: mainProperty.departmentId,
-                    rentAmount: unit.rentAmount || 0,
-                    depositAmount: unit.depositAmount || 0,
-                    owner: mainProperty.owner,
-                    description: mainProperty.description,
-                    status: unit.status || PropertyStatus.Vacant,
-                    agentId: unit.agentId || '',
-                    images: [],
-                    documents: [],
-                    notes: unit.notes || '',
-                    propertyType: formData.propertyType,
-                    unitType: unit.unitType,
-                    parentPropertyId: mainProperty.id,
-                    shopTenantInfo: unit.shopTenantInfo
-                } as Property;
-                onSave(unitProperty);
-            });
+            onSave(mainProperty, units);
+        } else {
+            onSave(mainProperty);
         }
     };
 
@@ -996,7 +973,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
     });
   }, [properties, searchQuery, statusFilter, agentFilter, propertyTypeFilter, showOnlyParents]);
 
-  const handleSave = (property: Property) => {
+  const handleSave = (property: Property, units?: Partial<Property>[]) => {
     if (selectedProperty) {
       setProperties(prev => prev.map(p => p.id === property.id ? property : p));
       addAuditLog('UPDATED_PROPERTY', `Updated property: ${property.name}`, property.id);
@@ -1004,6 +981,54 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
       setProperties(prev => [...prev, property]);
       addAuditLog('CREATED_PROPERTY', `Created property: ${property.name}`, property.id);
     }
+    
+    // Save/update units if this is an Estate or Plaza
+    if (units && units.length > 0) {
+        // First, remove old units that were removed
+        const existingChildUnits = properties.filter(p => p.parentPropertyId === property.id);
+        const existingUnitIds = new Set(existingChildUnits.map(u => u.id));
+        const newUnitIds = new Set(units.map(u => u.id || '').filter(id => id));
+        
+        // Remove units that are no longer in the list
+        existingUnitIds.forEach(id => {
+            if (!newUnitIds.has(id)) {
+                setProperties(prev => prev.filter(p => p.id !== id));
+            }
+        });
+        
+        // Add or update units
+        units.forEach((unit, index) => {
+            const unitProperty: Property = {
+                id: unit.id || `${property.id}-unit-${index + 1}`,
+                name: unit.name || '',
+                unitNumber: unit.unitNumber || '',
+                location: property.location,
+                departmentId: property.departmentId,
+                rentAmount: unit.rentAmount || 0,
+                depositAmount: unit.depositAmount || 0,
+                owner: property.owner,
+                description: property.description,
+                status: unit.status || PropertyStatus.Vacant,
+                agentId: unit.agentId || '',
+                images: [],
+                documents: [],
+                notes: unit.notes || '',
+                propertyType: property.propertyType,
+                unitType: unit.unitType,
+                parentPropertyId: property.id,
+                shopTenantInfo: unit.shopTenantInfo
+            } as Property;
+            
+            // Check if this unit already exists
+            const existingUnit = properties.find(p => p.id === unitProperty.id);
+            if (existingUnit) {
+                setProperties(prev => prev.map(p => p.id === unitProperty.id ? unitProperty : p));
+            } else {
+                setProperties(prev => [...prev, unitProperty]);
+            }
+        });
+    }
+    
     setIsFormModalOpen(false);
     setSelectedProperty(null);
   };
@@ -1043,6 +1068,10 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
 
   const openFormModal = (property: Property | null) => {
     setSelectedProperty(property);
+    
+    // If editing an Estate/Plaza, we need to pass existing units to the form
+    // But we don't set them here - we pass them as a prop to PropertyForm
+    
     setIsFormModalOpen(true);
   };
 
@@ -1184,6 +1213,9 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             agents={agents}
             departments={departments}
             properties={properties}
+            existingUnits={selectedProperty && (selectedProperty.propertyType === PropertyType.Estate || selectedProperty.propertyType === PropertyType.Plaza) 
+                ? properties.filter(p => p.parentPropertyId === selectedProperty.id) 
+                : []}
             onSave={handleSave} 
             onClose={() => setIsFormModalOpen(false)} 
         />
