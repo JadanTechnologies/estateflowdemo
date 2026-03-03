@@ -1065,25 +1065,94 @@ const PropertyDetailModal: React.FC<{
 
             <div>
                 <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Current Tenants</h3>
-                {propertyTenants.length > 0 ? (
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-secondary">
-                            <tr>
-                                <th className="p-2">Tenant Name</th>
-                                <th className="p-2">Lease End Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {propertyTenants.map(tenant => (
-                                <tr key={tenant.id} className="border-b border-border/50">
-                                    <td className="p-2">{tenant.fullName}</td>
-                                    <td className="p-2">{tenant.leaseEndDate}</td>
+                {/* For Estate/Plaza, show all tenants from child units. For standalone, show direct tenants */}
+                {(property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) ? (
+                    childUnits.length > 0 ? (
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-secondary">
+                                <tr>
+                                    <th className="p-2">Tenant Name</th>
+                                    <th className="p-2">Unit</th>
+                                    <th className="p-2">Unit #</th>
+                                    <th className="p-2">Phone</th>
+                                    <th className="p-2">Email</th>
+                                    <th className="p-2">Lease End Date</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {(() => {
+                                    const unitIds = childUnits.map(u => u.id);
+                                    const tenantsInChildUnits = tenants.filter(t => unitIds.includes(t.propertyId));
+                                    
+                                    // Also include tenants from shopTenantInfo
+                                    const unitsWithShopTenants = childUnits.filter(u => u.shopTenantInfo?.tenantName);
+                                    
+                                    if (tenantsInChildUnits.length === 0 && unitsWithShopTenants.length === 0) {
+                                        return (
+                                            <tr>
+                                                <td colSpan={6} className="p-4 text-center text-text-secondary italic">This property has no tenants.</td>
+                                            </tr>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <>
+                                            {tenantsInChildUnits.map(tenant => {
+                                                const unit = childUnits.find(u => u.id === tenant.propertyId);
+                                                return (
+                                                    <tr key={tenant.id} className="border-b border-border/50">
+                                                        <td className="p-2">{tenant.fullName}</td>
+                                                        <td className="p-2">{unit?.name || 'N/A'}</td>
+                                                        <td className="p-2">{unit?.unitNumber || '-'}</td>
+                                                        <td className="p-2">{tenant.phone || '-'}</td>
+                                                        <td className="p-2">{tenant.email || '-'}</td>
+                                                        <td className="p-2">{tenant.leaseEndDate || '-'}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            {unitsWithShopTenants.map(unit => (
+                                                <tr key={unit.id} className="border-b border-border/50">
+                                                    <td className="p-2">{unit.shopTenantInfo?.tenantName}</td>
+                                                    <td className="p-2">{unit.name}</td>
+                                                    <td className="p-2">{unit.unitNumber}</td>
+                                                    <td className="p-2">{unit.shopTenantInfo?.tenantPhone || '-'}</td>
+                                                    <td className="p-2">{unit.shopTenantInfo?.tenantEmail || '-'}</td>
+                                                    <td className="p-2">{unit.shopTenantInfo?.leaseEndDate || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </>
+                                    );
+                                })()}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p className="text-text-secondary italic">This property has no units yet.</p>
+                    )
                 ) : (
-                    <p className="text-text-secondary italic">This property is currently vacant.</p>
+                    propertyTenants.length > 0 ? (
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-secondary">
+                                <tr>
+                                    <th className="p-2">Tenant Name</th>
+                                    <th className="p-2">Phone</th>
+                                    <th className="p-2">Email</th>
+                                    <th className="p-2">Lease End Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {propertyTenants.map(tenant => (
+                                    <tr key={tenant.id} className="border-b border-border/50">
+                                        <td className="p-2">{tenant.fullName}</td>
+                                        <td className="p-2">{tenant.phone || '-'}</td>
+                                        <td className="p-2">{tenant.email || '-'}</td>
+                                        <td className="p-2">{tenant.leaseEndDate}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p className="text-text-secondary italic">This property is currently vacant.</p>
+                    )
                 )}
             </div>
             
