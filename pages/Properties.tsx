@@ -1382,7 +1382,77 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
         </label>
       </div>
       
-      <div className="bg-card rounded-lg shadow-lg overflow-x-auto">
+      {/* Property List - Card view for Estates/Plazas with summary stats */}
+      {showOnlyParents ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProperties
+            .filter(p => p.propertyType === PropertyType.Estate || p.propertyType === PropertyType.Plaza)
+            .map(prop => {
+              const childUnits = properties.filter((p: Property) => p.parentPropertyId === prop.id);
+              const totalUnits = childUnits.length;
+              const occupiedUnits = childUnits.filter((u: Property) => u.status === PropertyStatus.Occupied).length;
+              const vacantUnits = childUnits.filter((u: Property) => u.status === PropertyStatus.Vacant).length;
+              const maintenanceUnits = childUnits.filter((u: Property) => u.status === PropertyStatus.UnderMaintenance).length;
+              
+              // Count tenants from both tenants list and shopTenantInfo
+              const unitIds = childUnits.map((u: Property) => u.id);
+              const tenantsInUnits = tenants.filter((t: Tenant) => unitIds.includes(t.propertyId));
+              const unitsWithShopTenants = childUnits.filter((u: Property) => u.shopTenantInfo?.tenantName);
+              const totalTenants = tenantsInUnits.length + unitsWithShopTenants.length;
+              
+              return (
+                <div 
+                  key={prop.id} 
+                  className="bg-card rounded-lg shadow-lg border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => openDetailModal(prop)}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{prop.name}</h3>
+                      <p className="text-sm text-text-secondary">{prop.location}</p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        prop.propertyType === PropertyType.Estate ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {prop.propertyType === PropertyType.Estate ? 'Estate' : 'Plaza'}
+                    </span>
+                  </div>
+                  
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-secondary/50 rounded p-2 text-center">
+                      <div className="text-xl font-bold text-white">{totalUnits}</div>
+                      <div className="text-xs text-text-secondary">Total Units</div>
+                    </div>
+                    <div className="bg-green-500/10 rounded p-2 text-center">
+                      <div className="text-xl font-bold text-green-400">{vacantUnits}</div>
+                      <div className="text-xs text-text-secondary">Vacant</div>
+                    </div>
+                    <div className="bg-red-500/10 rounded p-2 text-center">
+                      <div className="text-xl font-bold text-red-400">{occupiedUnits}</div>
+                      <div className="text-xs text-text-secondary">Occupied</div>
+                    </div>
+                    <div className="bg-yellow-500/10 rounded p-2 text-center">
+                      <div className="text-xl font-bold text-yellow-400">{maintenanceUnits}</div>
+                      <div className="text-xs text-text-secondary">Maintenance</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                    <span className="text-sm text-text-secondary">{totalTenants} Tenants</span>
+                    <span className="text-green-400 text-sm font-medium">Click to view details</span>
+                  </div>
+                </div>
+              );
+            })}
+          {filteredProperties.filter(p => p.propertyType === PropertyType.Estate || p.propertyType === PropertyType.Plaza).length === 0 && (
+            <div className="col-span-full text-center p-6 text-text-secondary">
+              No Estates or Plazas found. Create one by adding a property and selecting Estate or Plaza type.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-card rounded-lg shadow-lg overflow-x-auto">
         <table className="w-full text-left">
           <thead className="border-b border-border">
             <tr>
@@ -1444,7 +1514,8 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
             )}
           </tbody>
         </table>
-      </div>
+        </div>
+      )}
 
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title={selectedProperty ? 'Edit Property' : 'Add New Property'}>
         <PropertyForm 
