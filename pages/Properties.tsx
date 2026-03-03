@@ -1324,11 +1324,13 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
     const property = properties.find(p => p.id === propertyToDelete);
     if (!property) return;
 
-    if (property.status === PropertyStatus.Occupied) {
-        alert("Cannot delete property. It is currently occupied by a tenant.");
-        setIsConfirmModalOpen(false);
-        setPropertyToDelete(null);
-        return;
+    // Delete the property and all its units (if it's an Estate/Plaza)
+    if (property.propertyType === PropertyType.Estate || property.propertyType === PropertyType.Plaza) {
+      // Find all child units and delete them too
+      const childUnits = properties.filter(p => p.parentPropertyId === property.id);
+      childUnits.forEach(unit => {
+        setProperties(prev => prev.filter(p => p.id !== unit.id));
+      });
     }
 
     setProperties(prev => prev.filter(p => p.id !== propertyToDelete));
@@ -1373,8 +1375,11 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
 
   // Handler to delete a unit
   const handleDeleteUnit = (unitId: string) => {
-    setProperties(prev => prev.filter(p => p.id !== unitId));
-    addAuditLog('DELETED_UNIT', `Deleted unit`, unitId);
+    const unit = properties.find(p => p.id === unitId);
+    if (unit) {
+      setProperties(prev => prev.filter(p => p.id !== unitId));
+      addAuditLog('DELETED_UNIT', `Deleted unit: ${unit.name}`, unitId);
+    }
   };
 
   return (
@@ -1549,19 +1554,26 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                 <td className="p-4">{prop.location}</td>
                 <td className="p-4">₦{(prop.rentAmount || 0).toLocaleString()}</td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(prop.status)}`}>
-                    {prop.status}
-                  </span>
+                  <select 
+                    value={prop.status}
+                    onChange={(e) => {
+                      setProperties(prev => prev.map(p => 
+                        p.id === prop.id ? { ...p, status: e.target.value as PropertyStatus } : p
+                      ));
+                      addAuditLog('UPDATED_PROPERTY_STATUS', `Updated status to ${e.target.value}`, prop.id);
+                    }}
+                    className="bg-secondary p-1 rounded border border-border text-xs"
+                  >
+                    {Object.values(PropertyStatus).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="p-4">{agents.find(a => a.id === prop.agentId)?.name || 'N/A'}</td>
                 <td className="p-4 space-x-2 whitespace-nowrap">
                   <button onClick={() => openDetailModal(prop)} className="text-green-400 hover:text-green-300">View</button>
-                  {(canManageGlobally || (canEditOwnProperty && prop.agentId === currentUser.id)) && (
-                    <button onClick={() => openFormModal(prop)} className="text-blue-400 hover:text-blue-300">Edit</button>
-                  )}
-                  {canManageGlobally && (
-                      <button onClick={() => handleDeleteClick(prop.id)} className="text-red-400 hover:text-red-300">Delete</button>
-                  )}
+                  <button onClick={() => openFormModal(prop)} className="text-blue-400 hover:text-blue-300">Edit</button>
+                  <button onClick={() => handleDeleteClick(prop.id)} className="text-red-400 hover:text-red-300">Delete</button>
                 </td>
               </tr>
             ))}
