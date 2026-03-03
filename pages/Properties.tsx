@@ -727,8 +727,9 @@ const PropertyDetailModal: React.FC<{
     departmentName: string;
     tenants: Tenant[];
     properties: Property[]; // For finding parent/child properties
+    agents: Agent[]; // For displaying agent names
     onClose: () => void;
-}> = ({ property, agentName, departmentName, tenants, properties, onClose }) => {
+}> = ({ property, agentName, departmentName, tenants, properties, agents, onClose }) => {
     const propertyTenants = tenants.filter(t => t.propertyId === property.id);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     
@@ -1398,6 +1399,7 @@ const Properties: React.FC<PropertiesProps> = ({ properties, agents, tenants, de
                 departmentName={departments.find(d => d.id === selectedProperty.departmentId)?.name || 'N/A'}
                 tenants={tenants}
                 properties={properties}
+                agents={agents}
                 onClose={() => setIsDetailModalOpen(false)}
             />
         )}
