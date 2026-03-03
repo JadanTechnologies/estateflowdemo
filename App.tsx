@@ -905,6 +905,9 @@ const App = () => {
                     property={properties.find(p => p.id === paymentForReceipt.propertyId)!}
                     agent={agents.find(a => a.id === paymentForReceipt.agentId)}
                     onPrinted={onReceiptPrinted}
+                    companyName={branding.platformName}
+                    companyAddress={branding.companyAddress}
+                    companyPhone={branding.companyPhone}
                 />
                 }
             </div>
